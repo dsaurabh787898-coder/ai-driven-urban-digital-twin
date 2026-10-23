@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bengaluru Rainfall Scenario Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDF0EC; --panel:#FBFCFA; --panel2:#F3F5F1;
+  --ink:#16262A; --ink2:#5B6D70; --ink3:#87979A;
+  --rule:#D2D9D1; --rule2:#E2E7E0;
+  --accent:#0E5257; --accent-soft:#D9E7E5;
+  --pos:#B2482C; --neg:#2E7A72;
+  --rain:#1F6F9C; --rain-soft:#D6E6F0;
+  --shadow:0 1px 0 rgba(22,38,42,.05);
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#10161A; --panel:#182025; --panel2:#1E272C;
+    --ink:#E4EBE7; --ink2:#9BACAF; --ink3:#71838A;
+    --rule:#2B363B; --rule2:#232E33;
+    --accent:#59B6A8; --accent-soft:#1D3336;
+    --pos:#E08663; --neg:#63C3B3;
+    --rain:#5AA8D6; --rain-soft:#17303E;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#10161A; --panel:#182025; --panel2:#1E272C;
+  --ink:#E4EBE7; --ink2:#9BACAF; --ink3:#71838A;
+  --rule:#2B363B; --rule2:#232E33;
+  --accent:#59B6A8; --accent-soft:#1D3336;
+  --pos:#E08663; --neg:#63C3B3;
+  --rain:#5AA8D6; --rain-soft:#17303E;
+  --shadow:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.mono{font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-0.012em}
+h2{font-size:19px} h3{font-size:14px}
+.wrap{max-width:1420px;margin:0 auto;padding:0 20px 70px}
+header{border-bottom:1px solid var(--rule);background:var(--panel);position:sticky;
+  top:env(safe-area-inset-top,0px);z-index:40}
+.hdr{max-width:1420px;margin:0 auto;padding:12px 20px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.brand h1{font-size:17px;line-height:1.2}
+.brand p{margin:1px 0 0;font-size:12px;color:var(--ink2)}
+.spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);
+  background:var(--panel2);border-radius:999px;padding:4px 11px;font-size:11.5px;color:var(--ink2)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--rain);flex:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tbtn{background:var(--panel2);border:1px solid var(--rule);border-radius:6px;padding:5px 10px;font-size:12px}
+.tbtn:hover{border-color:var(--accent)}
+.tbtn.go{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:500}
+.tbtn.go:hover{filter:brightness(1.1)}
+
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--rule);
+  border:1px solid var(--rule);border-radius:6px;overflow:hidden;margin:18px 0}
+.kpi{background:var(--panel);padding:11px 13px}
+.kpi .k{font-size:11px;color:var(--ink2)}
+.kpi .v{font-size:21px;font-weight:500;margin-top:2px;letter-spacing:-0.02em}
+.kpi .s{font-size:11px;color:var(--ink3)}
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+
+.main{display:grid;grid-template-columns:minmax(0,1.42fr) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:1080px){.main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:6px;box-shadow:var(--shadow);margin-bottom:18px}
+.card>.hd{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 13px;border-bottom:1px solid var(--rule2)}
+.card>.bd{padding:13px}
+.mapwrap{position:relative;background:var(--panel2);border-bottom:1px solid var(--rule2)}
+#map{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg button{background:var(--panel2);border:0;padding:5px 11px;font-size:12px;color:var(--ink2);border-right:1px solid var(--rule)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+
+label.ctl{display:block;margin:0 0 14px}
+label.ctl .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px}
+label.ctl .nm{font-size:13px}
+label.ctl .vl{font-size:13px;font-weight:500}
+label.ctl .hint{font-size:11.5px;color:var(--ink3);margin-top:4px;display:block}
+input[type=range]{width:100%;accent-color:var(--rain);margin:0}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-weight:500;color:var(--ink2);font-size:11.5px;padding:6px 7px;border-bottom:1px solid var(--rule)}
+td{padding:6px 7px;border-bottom:1px solid var(--rule2)}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--panel2)}
+tbody tr[aria-selected="true"]{background:var(--accent-soft)}
+td.num,th.num{text-align:right;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:999px;border:1px solid var(--rule);color:var(--ink2)}
+.scroll{max-height:420px;overflow:auto}
+.note{font-size:11.5px;color:var(--ink3);line-height:1.55}
+.note strong{color:var(--ink2);font-weight:500}
+.legend{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--ink2);padding:8px 13px;border-top:1px solid var(--rule2);flex-wrap:wrap}
+.ramp{height:9px;width:132px;border-radius:2px;border:1px solid var(--rule)}
+.empty{padding:26px 13px;text-align:center;color:var(--ink3);font-size:12.5px}
+.wardname{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bal{display:flex;gap:2px;height:7px;border-radius:2px;overflow:hidden;margin:8px 0 5px}
+.bal i{display:block}
+.bk{display:flex;gap:13px;font-size:11px;color:var(--ink3);flex-wrap:wrap}
+.bk span::before{content:"";display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:4px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="hdr">
+    <div class="brand">
+      <h1>Rainfall scenario simulator</h1>
+      <p>Paint rain onto wards and watch where the water ends up</p>
+    </div>
+    <div class="spacer"></div>
+    <span class="chip"><span class="dot"></span><span id="modechip">scenario estimate</span></span>
+    <button class="tbtn" id="theme">Theme</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="kpis">
+    <div class="kpi"><div class="k">Rain falling</div><div class="v mono" id="k-rain">0</div><div class="s" id="k-rain-s">no wards selected</div></div>
+    <div class="kpi"><div class="k">Becomes runoff</div><div class="v mono" id="k-runoff">0</div><div class="s" id="k-runoff-s">&mdash;</div></div>
+    <div class="kpi"><div class="k">Held in the city</div><div class="v mono" id="k-ret">0</div><div class="s" id="k-ret-s">&mdash;</div></div>
+    <div class="kpi"><div class="k">Wards ponding</div><div class="v mono" id="k-wards">0</div><div class="s" id="k-wards-s">of 198</div></div>
+    <div class="kpi"><div class="k">People in high risk</div><div class="v mono" id="k-pop">0</div><div class="s" id="k-pop-s">flood risk 60+</div></div>
+  </div>
+
+  <div class="main">
+    <div>
+      <div class="card">
+        <div class="hd">
+          <h3>City map</h3>
+          <div class="spacer"></div>
+          <div class="seg" id="layers" role="group" aria-label="Map layer">
+            <button data-layer="hazard" aria-pressed="true">Flood hazard</button>
+            <button data-layer="ponding" aria-pressed="false">Ponding</button>
+            <button data-layer="upstream" aria-pressed="false">Water from upstream</button>
+            <button data-layer="rain" aria-pressed="false">Rain applied</button>
+            <button data-layer="heat" aria-pressed="false">Heat risk</button>
+          </div>
+        </div>
+        <div class="mapwrap"><canvas id="map"></canvas></div>
+        <div class="legend">
+          <span id="legend-lo">0</span>
+          <div class="ramp" id="ramp"></div>
+          <span id="legend-hi">100</span>
+          <div class="spacer" style="flex:1"></div>
+          <span id="hovertxt">Click or drag across the map to make it rain</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd">
+          <h3>Ward results</h3>
+          <div class="spacer"></div>
+          <div class="seg" id="sortseg" role="group" aria-label="Sort">
+            <button data-sort="hazard" aria-pressed="true">Hazard</button>
+            <button data-sort="ponding" aria-pressed="false">Ponding</button>
+            <button data-sort="upstream" aria-pressed="false">Upstream share</button>
+            <button data-sort="risk" aria-pressed="false">Flood risk</button>
+          </div>
+        </div>
+        <div class="scroll">
+          <table>
+            <thead><tr>
+              <th>Ward</th>
+              <th class="num">Rain</th><th class="num">CN</th><th class="num">Runoff</th>
+              <th class="num">From upstream</th><th class="num">Ponding</th>
+              <th class="num">Flood risk</th>
+            </tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+          <div class="empty" id="tempty">Nothing is raining yet. Pick a preset or paint on the map.</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="hd"><h3>Storm</h3><div class="spacer"></div>
+          <button class="tbtn" id="clear">Clear rain</button>
+        </div>
+        <div class="bd">
+          <label class="ctl">
+            <span class="row"><span class="nm">Rainfall depth</span><span class="vl mono"><span id="v-rain">110</span> mm</span></span>
+            <input type="range" id="s-rain" min="0" max="300" step="5" value="110">
+            <span class="hint">Applied to every ward you paint. Bengaluru's 2022 event delivered roughly 130 mm in a day across parts of the east.</span>
+          </label>
+          <label class="ctl">
+            <span class="row"><span class="nm">Over</span><span class="vl mono"><span id="v-dur">3</span> hours</span></span>
+            <input type="range" id="s-dur" min="1" max="24" step="1" value="3">
+            <span class="hint">Shorter storms overwhelm drains: the same depth in less time leaves more standing.</span>
+          </label>
+          <label class="ctl">
+            <span class="row"><span class="nm">Drainage capacity</span><span class="vl mono"><span id="v-drain">12</span> mm/hr</span></span>
+            <input type="range" id="s-drain" min="0" max="40" step="1" value="12">
+            <span class="hint">A scenario knob, not measured data. There is no storm-drain capacity dataset in this project, so you set it yourself and see how much the answer depends on it.</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h3>Brush</h3></div>
+        <div class="bd">
+          <div class="seg" id="brushseg" role="group" aria-label="Brush size" style="margin-bottom:12px">
+            <button data-brush="ward" aria-pressed="true">Ward</button>
+            <button data-brush="neigh" aria-pressed="false">Ward + neighbours</button>
+            <button data-brush="zone" aria-pressed="false">Whole zone</button>
+          </div>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <button class="tbtn go" id="p-city">Rain on the whole city</button>
+            <button class="tbtn" id="p-east">East Bengaluru</button>
+            <button class="tbtn" id="p-valley">Vrishabhavathi valley</button>
+          </div>
+          <p class="note" style="margin:12px 0 0">Drag to paint. Hold <strong>Alt</strong> and drag to erase.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h3>Where the water went</h3></div>
+        <div class="bd">
+          <div class="bal" id="bal">
+            <i style="flex:1;background:var(--rule2)"></i>
+          </div>
+          <div class="bk">
+            <span style="--c:var(--neg)" id="bk1">Soaked in or intercepted</span>
+            <span id="bk2">Standing in the city</span>
+            <span id="bk3">Left the city</span>
+          </div>
+          <p class="note" id="balnote" style="margin:12px 0 0">Mass balance closes exactly: every cubic metre of runoff is accounted for as ponded, drained or exported past the city edge.</p>
+        </div>
+      </div>
+
+      <div class="card" id="detailcard" hidden>
+        <div class="hd"><h3 id="d-name">Ward</h3><div class="spacer"></div><button class="tbtn" id="d-close">Close</button></div>
+        <div class="bd" id="d-body"></div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h3>Read this before believing a number</h3></div>
+        <div class="bd">
+          <p class="note" style="margin:0 0 9px">This is a <strong>cascade mass-balance model over ward polygons</strong>, not a hydrodynamic simulation. Runoff comes from the NRCS curve number method, which is published and citable. Routing follows ward-to-ward elevation drops, which is not.</p>
+          <p class="note" style="margin:0 0 9px"><strong>Ponding depth is an accumulation index in millimetres, not a water level.</strong> It spreads retained water evenly across a ward of several square kilometres. Real flooding concentrates in a few percent of that area, so actual depth where it floods is many times higher and everywhere else is dry. Read the ranking, not the value.</p>
+          <p class="note" style="margin:0 0 9px">Flow direction comes from the <strong>mean elevation of each ward</strong>. A ward whose average sits high can still contain the lowest point around. Real routing follows the storm drain and rajakaluve network, which is culverted in places and runs against the surface gradient.</p>
+          <p class="note" style="margin:0">Nothing here is calibrated against observed flood extents. Doing that needs Sentinel-1 inundation mapping or BBMP incident records, and until then the ward ordering is a hypothesis.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = /*__FLOODBUNDLE__*/{};
+</script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const W = DATA.wards, U = DATA.units, T = DATA.topology, CFG = DATA.floodConfig;
+const N = W.length;
+
+/* ---------- theme ---------- */
+$("#theme").onclick = () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+  draw();
+};
+
+/* ---------- model: a faithful port of pipeline/flood_model.py ---------- */
+function curveNumber(imp, can, wat){
+  imp = Math.min(1, Math.max(0, imp));
+  can = Math.min(1, Math.max(0, can));
+  wat = Math.min(1, Math.max(0, wat));
+  const tot = imp + can + wat;
+  if (tot > 1){ imp /= tot; can /= tot; wat /= tot; }
+  const per = Math.max(0, 1 - imp - can - wat);
+  const cn = imp*CFG.cn_impervious + can*CFG.cn_canopy + wat*CFG.cn_water + per*CFG.cn_pervious;
+  return Math.min(100, Math.max(30, cn));
+}
+function runoffDepth(P, cn){
+  if (P <= 0) return 0;
+  const S = 25400/cn - 254, Ia = CFG.ia_ratio * S;
+  if (P <= Ia) return 0;
+  return (P-Ia)*(P-Ia)/(P-Ia+S);
+}
+
+const OUTS = Array.from({length:N}, () => []);
+for (const [u,v,w] of T.edges) OUTS[u].push([v,w]);
+const CN = U.map(u => curveNumber(u.impervious, u.tree_canopy, u.water));
+const DROP = OUTS.map(o => o.length ? o.reduce((a,[,w])=>a+w,0)/o.length : 0);
+const DMAX = Math.max(...DROP) || 1;
+const SLOPE = DROP.map(d => Math.min(1, d/DMAX));
+const ORDER = [...Array(N).keys()].sort((a,b) => T.elevation[b] - T.elevation[a]);
+
+const LOGD = U.map(u => Math.log1p(u.pop_density));
+const LD_MIN = Math.min(...LOGD), LD_MAX = Math.max(...LOGD);
+const exposureScore = i => Math.min(1, Math.max(0, (LOGD[i]-LD_MIN)/(LD_MAX-LD_MIN)))*100;
+
+function retention(i){
+  const r = CFG.retention_base
+          + CFG.retention_water_gain * Math.min(1, Math.max(0, U[i].water))
+          - CFG.retention_slope_penalty * SLOPE[i];
+  return Math.min(0.95, Math.max(0.05, r));
+}
+
+function simulate(rain, durationHr, drainMmHr){
+  const localMm = new Float64Array(N), localVol = new Float64Array(N);
+  for (let i=0;i<N;i++){
+    localMm[i] = runoffDepth(rain[i]||0, CN[i]);
+    localVol[i] = localMm[i] * T.area_km2[i] * 1000;
+  }
+  const inflow = new Float64Array(N), retained = new Float64Array(N), outflow = new Float64Array(N);
+  let exported = 0;
+  for (const i of ORDER){
+    const through = localVol[i] + inflow[i];
+    if (through <= 0) continue;
+    if (!OUTS[i].length){
+      const leaves = through * CFG.sink_export;
+      exported += leaves; retained[i] = through - leaves; outflow[i] = leaves;
+      continue;
+    }
+    retained[i] = through * retention(i);
+    const pass = through - retained[i];
+    outflow[i] = pass;
+    let wsum = 0; for (const [,w] of OUTS[i]) wsum += w;
+    if (!wsum) wsum = 1;
+    for (const [v,w] of OUTS[i]) inflow[v] += pass * (w/wsum);
+  }
+  const res = [];
+  let ponded = 0;
+  for (let i=0;i<N;i++){
+    const areaM = T.area_km2[i] * 1000;
+    const raw = areaM > 0 ? retained[i]/areaM : 0;
+    const cap = drainMmHr * durationHr * (1 - CFG.drainage_builtup_penalty*Math.min(1,Math.max(0,U[i].builtup)));
+    const depth = Math.max(0, raw - cap);
+    ponded += depth * areaM;
+    const hazard = depth > 0 ? Math.min(100, 100*Math.sqrt(depth/CFG.depth_hi_mm)) : 0;
+    const through = localVol[i] + inflow[i];
+    res.push({
+      i, ward:W[i], rain:rain[i]||0, cn:CN[i], runoffMm:localMm[i],
+      inflow:inflow[i], outflow:outflow[i], ponding:depth, pondingRaw:raw,
+      hazard, isSink:!OUTS[i].length,
+      upstream: through > 0 ? inflow[i]/through : 0,
+      risk: CFG.w_hazard*hazard + CFG.w_exposure*exposureScore(i) + CFG.w_vulnerability*U[i].vulnerability*100
+    });
+  }
+  let totalRain = 0, totalRunoff = 0;
+  for (let i=0;i<N;i++){ totalRain += (rain[i]||0)*T.area_km2[i]*1000; totalRunoff += localVol[i]; }
+  return {units:res, totalRain, totalRunoff, exported, ponded,
+          drained: Math.max(0, totalRunoff - exported - ponded)};
+}
+function bandName(x){ let k=0; for (const b of CFG.bands) if (x>=b) k++; return CFG.band_names[k]; }
+
+/* ---------- geometry / projection ---------- */
+let BB = {x0:1e9,y0:1e9,x1:-1e9,y1:-1e9};
+for (const rings of DATA.wardGeo) for (const r of rings)
+  for (let k=0;k<r.length;k+=2){
+    if (r[k]<BB.x0) BB.x0=r[k]; if (r[k]>BB.x1) BB.x1=r[k];
+    if (r[k+1]<BB.y0) BB.y0=r[k+1]; if (r[k+1]>BB.y1) BB.y1=r[k+1];
+  }
+const LAT0 = (BB.y0+BB.y1)/2, KX = Math.cos(LAT0*Math.PI/180);
+const cv = $("#map"), ctx = cv.getContext("2d");
+let VIEW = {s:1, ox:0, oy:0, w:900, h:600};
+
+function layout(){
+  const cssW = cv.parentElement.clientWidth || 900;
+  const gw = (BB.x1-BB.x0)*KX, gh = (BB.y1-BB.y0);
+  const cssH = Math.max(340, Math.min(640, cssW * (gh/gw)));
+  const dpr = Math.min(2, devicePixelRatio||1);
+  cv.width = cssW*dpr; cv.height = cssH*dpr;
+  cv.style.height = cssH+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const pad = 10;
+  const s = Math.min((cssW-2*pad)/gw, (cssH-2*pad)/gh);
+  VIEW = {s, ox:(cssW-gw*s)/2, oy:(cssH-gh*s)/2, w:cssW, h:cssH};
+}
+const px = x => VIEW.ox + (x-BB.x0)*KX*VIEW.s;
+const py = y => VIEW.oy + (BB.y1-y)*VIEW.s;
+
+function pip(x, y, ring){
+  let inside = false;
+  for (let i=0, j=ring.length-2; i<ring.length; j=i, i+=2){
+    const xi=ring[i], yi=ring[i+1], xj=ring[j], yj=ring[j+1];
+    if ((yi>y)!==(yj>y) && x < (xj-xi)*(y-yi)/(yj-yi)+xi) inside = !inside;
+  }
+  return inside;
+}
+const WBB = DATA.wardGeo.map(rings => {
+  let a=1e9,b=1e9,c=-1e9,d=-1e9;
+  for (const r of rings) for (let k=0;k<r.length;k+=2){
+    if(r[k]<a)a=r[k]; if(r[k]>c)c=r[k]; if(r[k+1]<b)b=r[k+1]; if(r[k+1]>d)d=r[k+1];
+  }
+  return [a,b,c,d];
+});
+function wardAt(cx, cy){
+  const lon = BB.x0 + (cx-VIEW.ox)/(VIEW.s*KX);
+  const lat = BB.y1 - (cy-VIEW.oy)/VIEW.s;
+  for (let i=0;i<N;i++){
+    const b = WBB[i];
+    if (lon<b[0]||lon>b[2]||lat<b[1]||lat>b[3]) continue;
+    let inside = false;
+    for (const r of DATA.wardGeo[i]) if (pip(lon, lat, r)) inside = !inside;
+    if (inside) return i;
+  }
+  return -1;
+}
+
+/* ---------- colour ---------- */
+const lerp=(a,b,t)=>a+(b-a)*t;
+function ramp(stops, t){
+  t = Math.min(1, Math.max(0, t));
+  const n = stops.length-1, k = Math.min(n-1, Math.floor(t*n)), f = t*n-k;
+  const a = stops[k], b = stops[k+1];
+  return `rgb(${Math.round(lerp(a[0],b[0],f))},${Math.round(lerp(a[1],b[1],f))},${Math.round(lerp(a[2],b[2],f))})`;
+}
+const WATER = [[238,244,246],[190,219,232],[124,183,214],[57,134,184],[22,84,132],[12,44,78]];
+const HEAT  = [[247,244,233],[247,215,163],[240,168,110],[221,110,74],[176,58,52],[110,27,38]];
+const RAINR = [[240,244,242],[203,228,240],[142,199,228],[70,157,206],[28,102,158]];
+
+/* ---------- state ---------- */
+let rain = new Float64Array(N);
+let result = null;
+let layer = "hazard";
+let sortKey = "hazard";
+let brush = "ward";
+let selected = -1;
+let hover = -1;
+
+const fmt = n => n>=1e9 ? (n/1e9).toFixed(2)+"bn" : n>=1e6 ? (n/1e6).toFixed(1)+"m" : n>=1e3 ? (n/1e3).toFixed(0)+"k" : Math.round(n);
+const fmtM3 = n => n>=1e6 ? (n/1e6).toFixed(1)+" Mm³" : fmt(n)+" m³";
+
+function value(u){
+  if (layer==="hazard") return u.hazard/100;
+  if (layer==="ponding") return Math.min(1, u.ponding/300);
+  if (layer==="upstream") return u.upstream;
+  if (layer==="rain") return Math.min(1, u.rain/300);
+  return Math.min(1, Math.max(0, (U[u.i].lst-30)/18));
+}
+function colourFor(u){
+  const t = value(u);
+  if (layer==="heat") return ramp(HEAT, t);
+  if (layer==="rain") return t>0 ? ramp(RAINR, 0.25+0.75*t) : null;
+  return t>0.001 ? ramp(WATER, t) : null;
+}
+
+function draw(){
+  layout();
+  const cs = getComputedStyle(document.documentElement);
+  const base = cs.getPropertyValue("--panel2").trim();
+  const rule = cs.getPropertyValue("--rule").trim();
+  const ink  = cs.getPropertyValue("--ink").trim();
+  ctx.clearRect(0,0,VIEW.w,VIEW.h);
+
+  const units = result ? result.units : null;
+  // The hatch marks which wards are being rained on. When almost everything is
+  // raining it marks nothing, so it is suppressed rather than covering the map.
+  let wet = 0; for (let i=0;i<N;i++) if (rain[i] > 0) wet++;
+  const showHatch = wet > 0 && wet < N*0.75 && layer !== "rain";
+
+  for (let i=0;i<N;i++){
+    const rings = DATA.wardGeo[i];
+    ctx.beginPath();
+    for (const r of rings){
+      ctx.moveTo(px(r[0]), py(r[1]));
+      for (let k=2;k<r.length;k+=2) ctx.lineTo(px(r[k]), py(r[k+1]));
+      ctx.closePath();
+    }
+    let fill = base;
+    if (units){ const c = colourFor(units[i]); if (c) fill = c; }
+    else if (layer==="heat") fill = ramp(HEAT, Math.min(1,Math.max(0,(U[i].lst-30)/18)));
+    ctx.fillStyle = fill; ctx.fill();
+    ctx.strokeStyle = rule; ctx.lineWidth = 0.5; ctx.stroke();
+
+    if (showHatch && rain[i] > 0){
+      ctx.save(); ctx.clip();
+      ctx.strokeStyle = "rgba(31,111,156,.5)"; ctx.lineWidth = 1;
+      const b = WBB[i], x0=px(b[0]), x1=px(b[2]), y0=py(b[3]), y1=py(b[1]);
+      for (let x=x0-(y1-y0); x<x1; x+=6){
+        ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x+(y1-y0), y1); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  // zone borders
+  ctx.strokeStyle = rule; ctx.lineWidth = 1.1; ctx.beginPath();
+  for (const s of DATA.zoneSegs){
+    ctx.moveTo(px(s[0]), py(s[1])); ctx.lineTo(px(s[2]), py(s[3]));
+  }
+  ctx.stroke();
+
+  // upstream contributors of the selected ward
+  if (selected >= 0 && result){
+    const up = new Set();
+    let frontier = [selected];
+    for (let step=0; step<40 && frontier.length; step++){
+      const next = [];
+      for (const v of frontier)
+        for (let u=0;u<N;u++)
+          if (!up.has(u) && u !== selected && OUTS[u].some(([w])=>w===v)){ up.add(u); next.push(u); }
+      frontier = next;
+    }
+    ctx.strokeStyle = cs.getPropertyValue("--accent").trim();
+    ctx.lineWidth = 1.2;
+    for (const i of up){
+      ctx.beginPath();
+      for (const r of DATA.wardGeo[i]){
+        ctx.moveTo(px(r[0]), py(r[1]));
+        for (let k=2;k<r.length;k+=2) ctx.lineTo(px(r[k]), py(r[k+1]));
+        ctx.closePath();
+      }
+      ctx.stroke();
+    }
+  }
+
+  for (const [i, lw] of [[hover,1.6],[selected,2.4]]){
+    if (i < 0) continue;
+    ctx.beginPath();
+    for (const r of DATA.wardGeo[i]){
+      ctx.moveTo(px(r[0]), py(r[1]));
+      for (let k=2;k<r.length;k+=2) ctx.lineTo(px(r[k]), py(r[k+1]));
+      ctx.closePath();
+    }
+    ctx.strokeStyle = ink; ctx.lineWidth = lw; ctx.stroke();
+  }
+  drawLegend();
+}
+
+function drawLegend(){
+  const stops = layer==="heat" ? HEAT : layer==="rain" ? RAINR : WATER;
+  const css = stops.map((c,k)=>`rgb(${c[0]},${c[1]},${c[2]}) ${k/(stops.length-1)*100}%`).join(",");
+  $("#ramp").style.background = `linear-gradient(90deg, ${css})`;
+  const L = {
+    hazard:["no ponding","hazard 100"], ponding:["0 mm","300 mm+"],
+    upstream:["all local rain","all from upstream"], rain:["dry","300 mm"],
+    heat:["30 °C","48 °C"]
+  }[layer];
+  $("#legend-lo").textContent = L[0];
+  $("#legend-hi").textContent = L[1];
+}
+
+/* ---------- run + render ---------- */
+function run(){
+  const dur = +$("#s-dur").value, dr = +$("#s-drain").value;
+  const any = rain.some(v => v>0);
+  result = any ? simulate(rain, dur, dr) : null;
+  renderKpis(); renderTable(); renderBalance(); renderDetail(); draw();
+}
+
+function renderKpis(){
+  if (!result){
+    $("#k-rain").textContent="0"; $("#k-rain-s").textContent="no wards selected";
+    $("#k-runoff").textContent="0"; $("#k-runoff-s").textContent="—";
+    $("#k-ret").textContent="0"; $("#k-ret-s").textContent="—";
+    $("#k-wards").textContent="0"; $("#k-wards-s").textContent="of "+N;
+    $("#k-pop").textContent="0";
+    return;
+  }
+  const r = result;
+  const wet = r.units.filter(u=>u.rain>0).length;
+  $("#k-rain").textContent = fmtM3(r.totalRain);
+  $("#k-rain-s").textContent = wet+" ward"+(wet===1?"":"s")+" raining";
+  $("#k-runoff").textContent = fmtM3(r.totalRunoff);
+  $("#k-runoff-s").textContent = r.totalRain>0 ? Math.round(100*r.totalRunoff/r.totalRain)+"% of rainfall" : "—";
+  $("#k-ret").textContent = fmtM3(r.ponded);
+  $("#k-ret-s").textContent = r.totalRunoff>0 ? Math.round(100*r.ponded/r.totalRunoff)+"% of runoff stays" : "—";
+  const pond = r.units.filter(u=>u.ponding>0).length;
+  $("#k-wards").textContent = pond;
+  $("#k-wards-s").textContent = "of "+N+" wards";
+  const pop = r.units.filter(u=>u.risk>=60).reduce((a,u)=>a+U[u.i].population,0);
+  $("#k-pop").textContent = fmt(pop);
+}
+
+function renderBalance(){
+  const el = $("#bal");
+  if (!result || result.totalRunoff<=0){
+    el.innerHTML = '<i style="flex:1;background:var(--rule2)"></i>';
+    $("#bk1").textContent="Soaked in or intercepted"; $("#bk2").textContent="Standing in the city"; $("#bk3").textContent="Left the city";
+    return;
+  }
+  const r = result, tot = r.totalRunoff;
+  const parts = [[r.drained,"var(--neg)"],[r.ponded,"var(--rain)"],[r.exported,"var(--ink3)"]];
+  el.innerHTML = parts.map(([v,c]) =>
+    `<i style="flex:${Math.max(0.001,v/tot)};background:${c}"></i>`).join("");
+  $("#bk1").textContent = "Drained away  " + fmtM3(r.drained);
+  $("#bk2").textContent = "Standing  " + fmtM3(r.ponded);
+  $("#bk3").textContent = "Left the city  " + fmtM3(r.exported);
+  const infil = r.totalRain - r.totalRunoff;
+  $("#balnote").textContent =
+    `Of ${fmtM3(r.totalRain)} falling, ${fmtM3(infil)} soaks in or is intercepted before it ever runs off. `+
+    `The rest is tracked ward by ward and the three figures above sum to it exactly.`;
+}
+
+function renderTable(){
+  const tb = $("#tbody"), empty = $("#tempty");
+  if (!result){ tb.innerHTML=""; empty.hidden=false; return; }
+  empty.hidden = true;
+  const key = {hazard:u=>u.hazard, ponding:u=>u.ponding, upstream:u=>u.upstream, risk:u=>u.risk}[sortKey];
+  const rows = result.units.filter(u=>u.ponding>0||u.rain>0).sort((a,b)=>key(b)-key(a)).slice(0,60);
+  if (!rows.length){ tb.innerHTML=""; empty.hidden=false;
+    empty.textContent="This storm produces no ponding anywhere. Try more rainfall, a shorter storm, or less drainage."; return; }
+  tb.innerHTML = rows.map(u => `
+    <tr data-i="${u.i}" aria-selected="${u.i===selected}">
+      <td><div class="wardname" title="${u.ward}">${u.ward}</div>
+          ${u.isSink?'<span class="tag">outlet</span>':''}</td>
+      <td class="num">${u.rain?Math.round(u.rain):"—"}</td>
+      <td class="num">${u.cn.toFixed(0)}</td>
+      <td class="num">${u.runoffMm.toFixed(0)}</td>
+      <td class="num">${Math.round(u.upstream*100)}%</td>
+      <td class="num">${u.ponding.toFixed(0)}</td>
+      <td class="num">${u.risk.toFixed(0)}</td>
+    </tr>`).join("");
+  tb.querySelectorAll("tr").forEach(tr => tr.onclick = () => {
+    selected = +tr.dataset.i; renderTable(); renderDetail(); draw();
+  });
+}
+
+function renderDetail(){
+  const card = $("#detailcard");
+  if (selected < 0 || !result){ card.hidden = true; return; }
+  const u = result.units[selected], f = U[selected];
+  card.hidden = false;
+  $("#d-name").textContent = u.ward;
+  const upList = [];
+  for (let i=0;i<N;i++) if (OUTS[i].some(([v])=>v===selected)) upList.push(W[i]);
+  const row = (k,v) => `<div style="display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid var(--rule2)">
+      <span style="color:var(--ink2);font-size:12.5px">${k}</span><span class="mono" style="font-size:12.5px">${v}</span></div>`;
+  $("#d-body").innerHTML =
+    row("Rain applied", u.rain ? u.rain.toFixed(0)+" mm" : "none") +
+    row("Curve number", u.cn.toFixed(1)) +
+    row("Runs off locally", u.runoffMm.toFixed(1)+" mm") +
+    row("Arrives from upstream", fmtM3(u.inflow)) +
+    row("Passes downstream", fmtM3(u.outflow)) +
+    row("Ponding index", u.ponding.toFixed(0)+" mm") +
+    row("Flood risk", u.risk.toFixed(0)+"  "+bandName(u.risk)) +
+    row("Heat risk (for comparison)", (0.6*Math.min(100,Math.max(0,(f.lst-30)/18*100))+0.25*exposureScore(selected)+0.15*f.vulnerability*100).toFixed(0)) +
+    row("Population", fmt(f.population)) +
+    row("Elevation", T.elevation[selected].toFixed(0)+" m") +
+    `<p class="note" style="margin:11px 0 0">${
+      u.upstream > 0.5
+        ? `Most of the water here did not fall here: ${Math.round(u.upstream*100)}% arrived from upstream. Rain falling on ${upList.slice(0,3).join(", ")}${upList.length>3?" and others":""} drains through this ward.`
+        : `This ward's water is mostly its own rainfall. ${upList.length? "Its uphill neighbours are "+upList.slice(0,3).join(", ")+".":"It has no uphill neighbours."}`
+    }</p>` +
+    (u.isSink ? `<p class="note" style="margin:8px 0 0">This ward is a <strong>domain outlet</strong>: nothing downhill of it is modelled, so ${Math.round(CFG.sink_export*100)}% of arriving water is assumed to leave the city. That assumption drives its result.</p>` : "");
+}
+
+/* ---------- painting ---------- */
+let painting = false, erasing = false;
+function applyBrush(i, erase){
+  const amt = erase ? 0 : +$("#s-rain").value;
+  let targets = [i];
+  if (brush === "neigh") targets = [i, ...T.neighbours[i]];
+  if (brush === "zone"){
+    const z = DATA.zoneOf[i];
+    targets = []; for (let k=0;k<N;k++) if (DATA.zoneOf[k]===z) targets.push(k);
+  }
+  let changed = false;
+  for (const t of targets) if (rain[t] !== amt){ rain[t] = amt; changed = true; }
+  return changed;
+}
+function pos(e){
+  const r = cv.getBoundingClientRect();
+  return [e.clientX-r.left, e.clientY-r.top];
+}
+cv.addEventListener("pointerdown", e => {
+  cv.setPointerCapture(e.pointerId);
+  painting = true; erasing = e.altKey;
+  const i = wardAt(...pos(e));
+  if (i>=0){ selected = i; if (applyBrush(i, erasing)) run(); else { renderDetail(); draw(); } }
+});
+cv.addEventListener("pointermove", e => {
+  const [x,y] = pos(e); const i = wardAt(x,y);
+  if (i !== hover){
+    hover = i;
+    $("#hovertxt").textContent = i>=0
+      ? W[i] + (result && result.units[i].ponding>0 ? ` — ponding ${result.units[i].ponding.toFixed(0)} mm` : "")
+      : "Click or drag across the map to make it rain";
+    if (!painting) draw();
+  }
+  if (painting && i>=0 && applyBrush(i, erasing)) run();
+});
+const stop = () => { painting = false; };
+cv.addEventListener("pointerup", stop);
+cv.addEventListener("pointercancel", stop);
+cv.addEventListener("pointerleave", () => { hover=-1; $("#hovertxt").textContent="Click or drag across the map to make it rain"; draw(); });
+
+/* ---------- controls ---------- */
+function segment(sel, attr, fn){
+  $(sel).querySelectorAll("button").forEach(b => b.onclick = () => {
+    $(sel).querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x===b));
+    fn(b.dataset[attr]);
+  });
+}
+segment("#layers","layer", v => { layer = v; draw(); });
+segment("#sortseg","sort", v => { sortKey = v; renderTable(); });
+segment("#brushseg","brush", v => { brush = v; });
+
+for (const [id, out, after] of [["#s-rain","#v-rain",repaintRain],["#s-dur","#v-dur",run],["#s-drain","#v-drain",run]]){
+  $(id).addEventListener("input", () => { $(out).textContent = $(id).value; after(); });
+}
+function repaintRain(){
+  const amt = +$("#s-rain").value;
+  let any = false;
+  for (let i=0;i<N;i++) if (rain[i] > 0){ rain[i] = amt; any = true; }
+  if (any) run();
+}
+$("#clear").onclick = () => { rain.fill(0); selected=-1; run(); };
+$("#d-close").onclick = () => { selected=-1; renderTable(); renderDetail(); draw(); };
+
+function setRain(pred){
+  const amt = +$("#s-rain").value;
+  rain.fill(0);
+  for (let i=0;i<N;i++) if (pred(i)) rain[i] = amt;
+  run();
+}
+$("#p-city").onclick = () => setRain(() => true);
+const lonOf = i => (WBB[i][0]+WBB[i][2])/2;
+const lons = [...Array(N).keys()].map(lonOf).sort((a,b)=>a-b);
+const LON_E = lons[Math.floor(N*0.6)];
+$("#p-east").onclick = () => setRain(i => lonOf(i) >= LON_E);
+$("#p-valley").onclick = () => setRain(i => T.elevation[i] <= 890);
+
+addEventListener("resize", draw);
+$("#modechip").textContent = (DATA.meta.mode === "real" ? "real terrain · " : "") + "scenario estimate";
+
+/* first paint: a citywide storm, so the page opens with something to read */
+setRain(() => true);
+</script>
+</body>
+</html>

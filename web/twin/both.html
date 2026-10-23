@@ -1,0 +1,45 @@
+<div id="view-both" hidden>
+  <div class="kpis k5">
+    <div class="kpi"><div class="k">Rank agreement (Spearman)</div><div class="v mono" id="b-k-rho">—</div><div class="s" id="b-k-rho-s">heat risk vs flood risk</div></div>
+    <div class="kpi"><div class="k">High on both</div><div class="v mono" id="b-k-both">0</div><div class="s">top third of each</div></div>
+    <div class="kpi"><div class="k">People there</div><div class="v mono" id="b-k-pop">0</div><div class="s" id="b-k-pop-s">in those wards</div></div>
+    <div class="kpi"><div class="k">Heat-only top third</div><div class="v mono" id="b-k-h">0</div><div class="s">wards</div></div>
+    <div class="kpi"><div class="k">Flood-only top third</div><div class="v mono" id="b-k-f">0</div><div class="s">wards</div></div>
+  </div>
+  <div class="main">
+    <div>
+      <div class="card">
+        <div class="hd"><h3>Heat × flood</h3><div class="spacer"></div>
+          <span class="fnote" style="margin:0" id="b-storm"></span></div>
+        <div class="mapwrap"><canvas id="b-map" class="mapcv"></canvas></div>
+        <div class="fleg" id="b-leg"></div>
+        <div class="fleg"><span id="b-hover">Hover a ward. Click to select it in every view.</span></div>
+      </div>
+      <div class="card">
+        <div class="hd"><h3>Wards ranked by their worse hazard</h3><div class="spacer"></div>
+          <span class="fnote" style="margin:0">percentile within each hazard; the higher of the two is shown, never averaged</span></div>
+        <div class="fscroll"><table>
+          <thead><tr><th>Ward</th><th>Heat risk</th><th>Heat pct</th><th>Flood risk</th><th>Flood pct</th><th>Susc. pct</th><th>Worse of</th></tr></thead>
+          <tbody id="b-tbody"></tbody></table></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="hd"><h3 id="b-name">Select a ward</h3></div>
+        <div class="bd" id="b-detail"><p class="fnote" style="margin:0">Click a ward on the map.</p></div>
+      </div>
+      <div class="card">
+        <div class="hd"><h3>One intervention, two hazards</h3></div>
+        <div class="bd" id="b-int"></div>
+      </div>
+      <div class="card">
+        <div class="hd"><h3>How to read this</h3></div>
+        <div class="bd">
+          <p class="fp">Both scores are 0–100 risks built the same way (hazard, population exposure, vulnerability), but the hazards are different physics, so the two numbers are <b>shown side by side and never averaged</b>.</p>
+          <p class="fp">Flood risk here uses the reference storm (the Flood tab storm) citywide, from the cascade. It is a scenario, not a forecast. Change the storm on the Flood tab and this view follows.</p>
+          <p class="fp" style="margin:0">Intervention effects change only the selected ward's own surfaces. Heat uses the learned LST model; flood re-runs the cascade with the ward's imperviousness, canopy and water changed. Water upstream is unchanged, so a ward fed from uphill may improve less than shown.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

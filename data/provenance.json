@@ -1,0 +1,37 @@
+{
+  "mode": "real",
+  "city": "Bengaluru",
+  "generated_utc": "2026-09-20T12:44:13.758487+00:00",
+  "units": "ward polygons",
+  "n_units": 198,
+  "zonal_scale_m": 100,
+  "composite_window": {
+    "start": "2025-03-21",
+    "end": "2026-09-20",
+    "months": [
+      3,
+      4,
+      5
+    ]
+  },
+  "landsat": {
+    "scenes": 17,
+    "most_recent_scene": "2026-05-11",
+    "median_clear_obs_per_unit": 14.780152855049202
+  },
+  "sources": {
+    "lst": "Landsat 8/9 C2 L2 ST_B10, emissivity-corrected, cloud-masked median",
+    "ndvi/ndwi/ndbi": "Sentinel-2 L2A SCL-masked median",
+    "tree_canopy/builtup/water": "ESA WorldCover v200 class fractions",
+    "bldg_height": "JRC GHSL GHS_BUILT_H 2018",
+    "albedo": "MODIS MCD43A3 white-sky shortwave",
+    "elevation": "Copernicus DEM GLO-30",
+    "population": "WorldPop 100 m constrained"
+  },
+  "caveats": [
+    "LST is a seasonal clear-sky composite, not a realtime observation. Its currency is the most recent clear scene: 2026-05-11.",
+    "Impervious fraction is a min-max rescaled NDBI, not a measured sealed-surface fraction. Replace with OSM footprints for operational use.",
+    "Vulnerability is a proxy from density, greenness and imperviousness. It contains no age, income, housing or health data.",
+    "Cloud-masked medians over the monsoon months are unreliable; the default window deliberately composites the pre-monsoon peak only."
+  ]
+}

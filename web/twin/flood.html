@@ -1,0 +1,111 @@
+<div id="view-flood" hidden>
+  <div class="kpis k5">
+    <div class="kpi"><div class="k">Rain falling</div><div class="v mono" id="f-k-rain">0</div><div class="s" id="f-k-rain-s">no wards selected</div></div>
+    <div class="kpi"><div class="k">Becomes runoff</div><div class="v mono" id="f-k-runoff">0</div><div class="s" id="f-k-runoff-s">&mdash;</div></div>
+    <div class="kpi"><div class="k">Held in the city</div><div class="v mono" id="f-k-ret">0</div><div class="s" id="f-k-ret-s">&mdash;</div></div>
+    <div class="kpi"><div class="k">Wards ponding</div><div class="v mono" id="f-k-wards">0</div><div class="s" id="f-k-wards-s">of 198</div></div>
+    <div class="kpi"><div class="k">People in high risk</div><div class="v mono" id="f-k-pop">0</div><div class="s">flood risk 60+</div></div>
+  </div>
+  <div class="main">
+    <div>
+      <div class="card">
+        <div class="hd">
+          <h3>Flood map</h3><div class="spacer"></div>
+          <label class="fchk"><input type="checkbox" id="f-pts"> BBMP-flagged points</label>
+          <div class="seg" id="f-layers" role="group" aria-label="Map layer">
+            <button data-layer="hazard" aria-pressed="true">Cascade hazard</button>
+            <button data-layer="ponding" aria-pressed="false">Ponding</button>
+            <button data-layer="upstream" aria-pressed="false">Upstream</button>
+            <button data-layer="rain" aria-pressed="false">Rain</button>
+            <button data-layer="susc" aria-pressed="false">Learned susceptibility</button>
+            <button data-layer="evidence" aria-pressed="false">Evidence agreement</button>
+            <button data-layer="heat" aria-pressed="false">Heat</button>
+          </div>
+        </div>
+        <div class="mapwrap"><canvas id="f-map" class="mapcv paint"></canvas></div>
+        <div class="fleg" id="f-leg"></div>
+        <div class="fleg"><span id="f-hover">Click or drag across the map to make it rain</span></div>
+      </div>
+      <div class="card">
+        <div class="hd"><h3>Ward results</h3><div class="spacer"></div>
+          <div class="seg" id="f-sortseg" role="group" aria-label="Sort">
+            <button data-sort="hazard" aria-pressed="true">Hazard</button>
+            <button data-sort="ponding" aria-pressed="false">Ponding</button>
+            <button data-sort="upstream" aria-pressed="false">Upstream</button>
+            <button data-sort="risk" aria-pressed="false">Risk</button>
+            <button data-sort="susc" aria-pressed="false">Susceptibility</button>
+          </div>
+        </div>
+        <div class="fscroll"><table>
+          <thead><tr><th>Ward</th><th>Rain</th><th>Runoff</th><th>Upstream</th><th>Ponding</th><th>Risk</th><th>Susc. pct</th><th>BBMP pts</th></tr></thead>
+          <tbody id="f-tbody"></tbody></table>
+          <div class="fempty" id="f-tempty">Nothing is raining yet. Pick a preset or paint on the map.</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="hd"><h3>Storm</h3><div class="spacer"></div><button class="tbtn" id="f-clear">Clear rain</button></div>
+        <div class="bd">
+          <label class="fctl"><span class="row2"><span class="nm">Rainfall depth</span><span class="vl mono"><span id="f-v-rain">110</span> mm</span></span>
+            <input type="range" id="f-s-rain" min="0" max="300" step="5" value="110">
+            <span class="hint">Applied to every ward you paint. Bengaluru's 2022 event delivered roughly 130 mm in a day across parts of the east.</span></label>
+          <label class="fctl"><span class="row2"><span class="nm">Over</span><span class="vl mono"><span id="f-v-dur">3</span> hours</span></span>
+            <input type="range" id="f-s-dur" min="1" max="24" step="1" value="3">
+            <span class="hint">Same depth in less time leaves more standing.</span></label>
+          <label class="fctl"><span class="row2"><span class="nm">Drainage capacity</span><span class="vl mono"><span id="f-v-drain">12</span> mm/hr</span></span>
+            <input type="range" id="f-s-drain" min="0" max="40" step="1" value="12">
+            <span class="hint">A scenario knob, not measured data. No storm-drain capacity dataset exists in this project.</span></label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="hd"><h3>Brush</h3></div>
+        <div class="bd">
+          <div class="seg fseg-gap" id="f-brushseg" role="group" aria-label="Brush size">
+            <button data-brush="ward" aria-pressed="true">Ward</button>
+            <button data-brush="neigh" aria-pressed="false">Ward + neighbours</button>
+            <button data-brush="zone" aria-pressed="false">Whole zone</button>
+          </div>
+          <div class="pillrow">
+            <button class="tbtn" id="f-p-city" style="background:var(--accent);color:#fff;border-color:var(--accent)">Rain on the whole city</button>
+            <button class="tbtn" id="f-p-east">East Bengaluru</button>
+            <button class="tbtn" id="f-p-valley">Vrishabhavathi valley</button>
+          </div>
+          <p class="fnote">Drag to paint. Hold <b>Alt</b> and drag to erase.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="hd"><h3>Where the water went</h3></div>
+        <div class="bd">
+          <div class="fbal" id="f-bal"><i style="flex:1;background:var(--rule2)"></i></div>
+          <div class="fbk"><span style="--c:var(--neg)" id="f-bk1">Drained away</span><span style="--c:var(--rain)" id="f-bk2">Standing</span><span style="--c:var(--ink3)" id="f-bk3">Left the city</span></div>
+          <p class="fnote" id="f-balnote">Mass balance closes exactly.</p>
+        </div>
+      </div>
+      <div class="card" id="f-detailcard" hidden>
+        <div class="hd"><h3 id="f-d-name">Ward</h3><div class="spacer"></div><button class="tbtn" id="f-d-close">Close</button></div>
+        <div class="bd" id="f-d-body"></div>
+      </div>
+      <div class="card">
+        <div class="hd"><h3>Learned flood susceptibility</h3></div>
+        <div class="bd" id="f-model"></div>
+      </div>
+      <div class="card">
+        <div class="hd"><h3>Does the cascade match BBMP's flagged wards?</h3></div>
+        <div class="bd" id="f-valid"></div>
+      </div>
+      <div class="card">
+        <div class="hd"><h3>Model says high, BBMP has not listed</h3></div>
+        <div class="bd" id="f-cands"></div>
+      </div>
+      <div class="card">
+        <div class="hd"><h3>Read this before believing a number</h3></div>
+        <div class="bd">
+          <p class="fp">Two different things are on this page. The <b>cascade</b> responds to the rain you paint (NRCS curve-number runoff routed ward to ward). The <b>learned susceptibility</b> does not respond to rain at all: it is a statistical map of which wards resemble the ones BBMP has flagged.</p>
+          <p class="fp"><b>Ponding is an accumulation index in mm, not a water level.</b> It spreads retained water over a whole ward. Read the ranking, not the value.</p>
+          <p class="fp">The BBMP points have no date, rainfall or depth, and list only places that were flagged, never places confirmed dry. A ward without a point is unlabelled, not safe. They cannot teach any model how much rain causes flooding.</p>
+          <p class="fp" style="margin:0">Skill against those labels is modest (see the validation card). Treat both layers as hypotheses to check, not forecasts.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

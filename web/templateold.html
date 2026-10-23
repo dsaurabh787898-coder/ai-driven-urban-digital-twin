@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bengaluru Urban Heat Digital Twin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDF0EC; --panel:#FBFCFA; --panel2:#F3F5F1;
+  --ink:#16262A; --ink2:#5B6D70; --ink3:#87979A;
+  --rule:#D2D9D1; --rule2:#E2E7E0;
+  --accent:#0E5257; --accent-soft:#D9E7E5;
+  --pos:#B2482C; --neg:#2E7A72;
+  --shadow:0 1px 0 rgba(22,38,42,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#10161A; --panel:#182025; --panel2:#1E272C;
+    --ink:#E4EBE7; --ink2:#9BACAF; --ink3:#71838A;
+    --rule:#2B363B; --rule2:#232E33;
+    --accent:#59B6A8; --accent-soft:#1D3336;
+    --pos:#E08663; --neg:#63C3B3;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#10161A; --panel:#182025; --panel2:#1E272C;
+  --ink:#E4EBE7; --ink2:#9BACAF; --ink3:#71838A;
+  --rule:#2B363B; --rule2:#232E33;
+  --accent:#59B6A8; --accent-soft:#1D3336;
+  --pos:#E08663; --neg:#63C3B3;
+  --shadow:none;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-0.012em}
+h2{font-size:19px} h3{font-size:14px}
+a{color:var(--accent)}
+.wrap{max-width:1420px;margin:0 auto;padding:0 20px 80px}
+
+/* header */
+header{border-bottom:1px solid var(--rule);background:var(--panel);position:sticky;top:0;z-index:40}
+.hdr{max-width:1420px;margin:0 auto;padding:12px 20px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.brand h1{font-size:17px;line-height:1.2}
+.brand p{margin:1px 0 0;font-size:12px;color:var(--ink2)}
+.spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);
+  background:var(--panel2);border-radius:999px;padding:4px 11px;font-size:11.5px;color:var(--ink2);
+  cursor:pointer;text-decoration:none}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.dot{width:7px;height:7px;border-radius:50%;background:#C8873A;flex:none}
+button{font:inherit;color:inherit;cursor:pointer}
+.tbtn{background:var(--panel2);border:1px solid var(--rule);border-radius:6px;padding:5px 10px;font-size:12px}
+.tbtn:hover{border-color:var(--accent)}
+
+/* kpi */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;background:var(--rule);
+  border:1px solid var(--rule);border-radius:6px;overflow:hidden;margin:18px 0}
+.kpi{background:var(--panel);padding:11px 13px}
+.kpi .k{font-size:11px;color:var(--ink2)}
+.kpi .v{font-size:21px;font-weight:500;margin-top:2px;letter-spacing:-0.02em}
+.kpi .s{font-size:11px;color:var(--ink3)}
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+
+/* layout */
+.main{display:grid;grid-template-columns:minmax(0,1.42fr) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:1080px){.main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:6px;box-shadow:var(--shadow)}
+.card>.hd{display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding:10px 13px;border-bottom:1px solid var(--rule2)}
+.card>.bd{padding:13px}
+
+/* map */
+.mapwrap{position:relative;background:var(--panel2);border-bottom:1px solid var(--rule2)}
+#map{display:block;width:100%;height:auto;touch-action:none;cursor:crosshair}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg button{background:var(--panel2);border:0;padding:5px 11px;font-size:12px;color:var(--ink2);
+  border-right:1px solid var(--rule)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+select{font:inherit;font-size:12px;background:var(--panel2);color:var(--ink);
+  border:1px solid var(--rule);border-radius:6px;padding:5px 8px}
+.readout{display:flex;gap:16px;flex-wrap:wrap;padding:8px 13px;font-size:12px;color:var(--ink2);
+  border-bottom:1px solid var(--rule2);min-height:34px}
+.readout b{font-weight:500;color:var(--ink)}
+.legend{padding:10px 13px}
+.ramp{height:10px;border-radius:2px;border:1px solid var(--rule)}
+.rampticks{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink3);margin-top:3px}
+
+/* inspector */
+.sel{display:flex;gap:14px;align-items:flex-start;padding:13px;border-bottom:1px solid var(--rule2)}
+.dial{flex:none}
+.selmeta h2{font-size:18px}
+.selmeta p{margin:2px 0 0;font-size:12px;color:var(--ink2)}
+.band{display:inline-block;margin-top:6px;padding:2px 9px;border-radius:999px;font-size:11.5px;
+  color:#fff;font-weight:500}
+.mets{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule2)}
+.met{background:var(--panel);padding:9px 12px}
+.met .k{font-size:10.5px;color:var(--ink3)}
+.met .v{font-size:15px;font-weight:500}
+.tabs{display:flex;border-bottom:1px solid var(--rule2);background:var(--panel2)}
+.tabs button{flex:1;background:none;border:0;border-bottom:2px solid transparent;
+  padding:9px 4px;font-size:12.5px;color:var(--ink2)}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);background:var(--panel)}
+.pane{padding:13px;display:none}
+.pane.on{display:block}
+.note{font-size:11.5px;color:var(--ink3);line-height:1.45;margin-top:10px}
+.note b{color:var(--ink2);font-weight:500}
+
+/* waterfall */
+.wf{display:grid;grid-template-columns:1fr;gap:5px}
+.wfrow{display:grid;grid-template-columns:132px 1fr 58px;gap:8px;align-items:center;font-size:12px}
+.wfbar{height:15px;position:relative;background:var(--panel2);border-radius:2px}
+.wfbar i{position:absolute;top:0;bottom:0;display:block;border-radius:2px}
+.wfbar u{position:absolute;top:-2px;bottom:-2px;width:1px;background:var(--rule);left:50%}
+.wfval{text-align:right;font-size:12px}
+
+/* sliders */
+.lev{margin-bottom:11px}
+.levhd{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px}
+.levhd span:last-child{color:var(--ink2)}
+input[type=range]{width:100%;accent-color:var(--accent);height:18px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.pill{border:1px solid var(--rule);background:var(--panel2);border-radius:999px;padding:4px 10px;font-size:11.5px}
+.pill[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.result{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--rule2);
+  border:1px solid var(--rule2);border-radius:5px;overflow:hidden;margin-top:12px}
+.result div{background:var(--panel);padding:10px}
+.result .k{font-size:10.5px;color:var(--ink3)}
+.result .v{font-size:20px;font-weight:500}
+
+/* table */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:7px 9px;text-align:right;border-bottom:1px solid var(--rule2);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:500;color:var(--ink2);font-size:11.5px;cursor:pointer;position:sticky;top:0;
+  background:var(--panel);border-bottom:1px solid var(--rule)}
+th:hover{color:var(--accent)}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--panel2)}
+tbody tr[aria-selected="true"]{background:var(--accent-soft)}
+.bar{display:inline-block;height:8px;border-radius:1px;vertical-align:middle;margin-right:6px}
+.tablewrap{max-height:360px;overflow:auto}
+
+/* misc sections */
+section{margin-top:22px}
+.sechd{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.sechd p{margin:0;font-size:12.5px;color:var(--ink2)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.two>*{min-width:0}
+.wfrow>*{min-width:0}
+.rec{min-width:0;overflow-wrap:anywhere}
+@media(max-width:900px){.two{grid-template-columns:1fr}}
+.rec{border-left:3px solid var(--rule);padding:9px 0 9px 12px;margin-bottom:12px}
+.rec h3{font-size:13.5px}
+.rec p{margin:3px 0 0;font-size:12.5px;color:var(--ink2)}
+.rec .eff{margin-top:5px;font-size:12px}
+dl.prov{margin:0;display:grid;grid-template-columns:132px 1fr;gap:7px 14px;font-size:12.5px}
+dl.prov dt{color:var(--ink2)}
+dl.prov dd{margin:0}
+.tag{display:inline-block;padding:1px 7px;border-radius:3px;font-size:10.5px;
+  border:1px solid var(--rule);color:var(--ink2);background:var(--panel2);margin-right:5px}
+.tag.real{border-color:#2E7A72;color:#2E7A72}
+.tag.sim{border-color:#B2482C;color:#B2482C}
+footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);font-size:12px;color:var(--ink3)}
+#perf,#fcTable,#recChart{overflow-x:auto}
+.formula{overflow-x:auto;white-space:nowrap}
+@media(max-width:640px){
+  .mets{grid-template-columns:repeat(2,1fr)}
+  .wfrow{grid-template-columns:104px 1fr 52px;font-size:11.5px}
+  dl.prov{grid-template-columns:1fr;gap:2px 0}
+  dl.prov dt{margin-top:6px}
+  .result .v{font-size:17px}
+  .hdr{gap:10px}
+  table{font-size:11.5px} th,td{padding:6px 7px}
+}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <div class="brand">
+      <h1>Bengaluru Urban Heat Digital Twin</h1>
+      <p id="subhead"></p>
+    </div>
+    <div class="spacer"></div>
+    <a class="chip" id="provChip" href="#method"><span class="dot"></span><span id="provChipText"></span></a>
+    <button class="tbtn" id="themeBtn">Dark</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="main">
+    <!-- MAP -->
+    <div class="card">
+      <div class="hd">
+        <div class="seg" id="viewSeg">
+          <button data-v="2d" aria-pressed="true">2D grid</button>
+          <button data-v="3d" aria-pressed="false">3D twin</button>
+        </div>
+        <div class="seg" id="unitSeg">
+          <button data-u="ward" aria-pressed="true">Ward</button>
+          <button data-u="cell" aria-pressed="false">Cell</button>
+          <button data-u="zone" aria-pressed="false">Zone</button>
+        </div>
+        <div class="spacer"></div>
+        <label style="font-size:12px;color:var(--ink2)">Layer
+          <select id="layerSel"></select>
+        </label>
+        <label style="font-size:12px;color:var(--ink2)">Model
+          <select id="modelSel"></select>
+        </label>
+      </div>
+      <div class="mapwrap"><canvas id="map"></canvas></div>
+      <div class="readout" id="readout"><span>Hover the grid to inspect a cell. Click to select.</span></div>
+      <div class="legend">
+        <div class="ramp" id="ramp"></div>
+        <div class="rampticks" id="rampticks"></div>
+      </div>
+    </div>
+
+    <!-- INSPECTOR -->
+    <div class="card">
+      <div class="sel">
+        <div class="dial"><svg id="dial" width="86" height="86" viewBox="0 0 86 86"></svg></div>
+        <div class="selmeta">
+          <h2 id="selName">—</h2>
+          <p id="selSub"></p>
+          <span class="band" id="selBand"></span>
+        </div>
+      </div>
+      <div class="mets" id="mets"></div>
+      <div class="tabs" id="tabs">
+        <button aria-selected="true" data-p="why">Why</button>
+        <button aria-selected="false" data-p="who">Who</button>
+        <button aria-selected="false" data-p="sim">Simulate</button>
+        <button aria-selected="false" data-p="fwd">Ahead</button>
+      </div>
+
+      <div class="pane on" id="pane-why">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px">
+          <h3>What drives the surface temperature here</h3>
+          <span class="mono" style="font-size:11.5px;color:var(--ink3)" id="whyUnit">°C</span>
+        </div>
+        <div class="wf" id="waterfall"></div>
+        <div class="note" id="whyNote"></div>
+      </div>
+
+      <div class="pane" id="pane-who">
+        <div id="whoBody"></div>
+      </div>
+
+      <div class="pane" id="pane-sim">
+        <div id="levers"></div>
+        <div class="row" style="margin:10px 0 2px">
+          <button class="pill" data-sc="A">A · Green cover</button>
+          <button class="pill" data-sc="B">B · Cool roofs</button>
+          <button class="pill" data-sc="C">C · Tree program</button>
+          <button class="pill" data-sc="D">D · Combined</button>
+          <button class="pill" data-sc="0">Reset</button>
+        </div>
+        <div class="result">
+          <div><div class="k">Baseline risk</div><div class="v mono" id="simBase">—</div></div>
+          <div><div class="k">Scenario risk</div><div class="v mono" id="simNew">—</div></div>
+          <div><div class="k">Change</div><div class="v mono" id="simDelta">—</div></div>
+        </div>
+        <div id="simSummary" class="note"></div>
+        <div style="margin-top:12px"><svg id="scChart" width="100%" height="128" viewBox="0 0 380 128"></svg></div>
+      </div>
+
+      <div class="pane" id="pane-fwd">
+        <svg id="fcChart" width="100%" height="190" viewBox="0 0 380 190"></svg>
+        <div id="fcTable"></div>
+        <div class="note" id="fcNote"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MITIGATION -->
+  <section>
+    <div class="sechd"><h2>Mitigation options for <span id="recWhere">—</span></h2>
+      <p>Each option is tied to a driver the model actually flagged here, and re-scored by re-running the model.</p></div>
+    <div class="card"><div class="bd"><div class="two"><div id="recs"></div><div id="recChart"></div></div></div></div>
+  </section>
+
+  <!-- COMPARISON -->
+  <section>
+    <div class="sechd"><h2>Ward comparison</h2><p>Click a column to sort, a row to select. Ordering is an analytical view, not a funding priority list.</p></div>
+    <div class="card"><div class="tablewrap"><table id="cmp"><thead></thead><tbody></tbody></table></div></div>
+  </section>
+
+  <!-- GLOBAL XAI + METRICS -->
+  <section>
+    <div class="two">
+      <div class="card"><div class="hd"><h2 style="font-size:15px">Global driver importance</h2></div>
+        <div class="bd"><div id="globalXai"></div>
+          <div class="note">Mean absolute Shapley value across a stratified sample of grid cells, in °C of land surface temperature. Global importance says what matters city-wide; the Why panel says what matters in the place you selected.</div>
+        </div></div>
+      <div class="card"><div class="hd"><h2 style="font-size:15px">Model performance</h2></div>
+        <div class="bd"><div id="perf"></div></div></div>
+    </div>
+  </section>
+
+  <!-- METHOD -->
+  <section id="method">
+    <div class="sechd"><h2>Method, provenance and limits</h2></div>
+    <div class="card"><div class="bd" id="methodBody"></div></div>
+  </section>
+
+  <footer>
+    Prototype decision-support tool. Every temperature, index and population figure shown here comes from a
+    labelled demo dataset, not from a satellite retrieval or a census enumeration. Scenario outputs are model
+    estimates under assumptions stated in the method section, not predicted real-world outcomes.
+  </footer>
+</div>
+
+<script>
+const BUNDLE = /*__BUNDLE__*/{};
+</script>
+<script>
+"use strict";
+(function(){
+const D = BUNDLE, BG = D.background, FEAT = D.features, NF = FEAT.length;
+const MODELS_ = D.models;
+let modelName = D.selectedModel;
+const FL = ["Vegetation (NDVI)","Tree canopy","Built-up fraction","Impervious surface","Water coverage","Surface albedo","Building height","Elevation"];
+const S = D.cellSchema.reduce((a,k,i)=>(a[k]=i,a),{});
+const CELLS = D.cells;
+const NROW = Math.max(...CELLS.map(c=>c[S.row]))+1, NCOL = Math.max(...CELLS.map(c=>c[S.col]))+1;
+
+/* ---------- risk index (transparent, no ML) ---------- */
+const CFG = {lstLo:30, lstHi:48, wH:0.60, wE:0.25, wV:0.15,
+             bands:[20,40,60,80], names:["Very low","Low","Moderate","High","Very high"]};
+const RAMP = ["#2A6F72","#68A894","#C9CFA0","#EBC77E","#DD8F45","#C0512E","#7E1F2C"];
+
+let LOGD = CELLS.map(c=>Math.log1p(c[S.population]));
+const LDMIN = Math.min(...LOGD), LDMAX = Math.max(...LOGD);
+const hazardOf = l => clamp((l-CFG.lstLo)/(CFG.lstHi-CFG.lstLo),0,1)*100;
+const exposureOf = p => clamp((Math.log1p(p)-LDMIN)/(LDMAX-LDMIN),0,1)*100;
+const riskOf = (lst,pop,vul) => CFG.wH*hazardOf(lst) + CFG.wE*exposureOf(pop) + CFG.wV*vul*100;
+const bandOf = r => { let i=0; while(i<4 && r>=CFG.bands[i]) i++; return i; };
+function clamp(v,a,b){return v<a?a:v>b?b:v}
+function lerp(a,b,t){return a+(b-a)*t}
+function ramp(t){ t=clamp(t,0,1)*(RAMP.length-1); const i=Math.floor(t), f=t-i;
+  if(i>=RAMP.length-1) return mixHex(RAMP[RAMP.length-1],RAMP[RAMP.length-1],0);
+  return mixHex(RAMP[i],RAMP[i+1],f); }
+function mixHex(a,b,t){const A=hx(a),B=hx(b);
+  return `rgb(${Math.round(lerp(A[0],B[0],t))},${Math.round(lerp(A[1],B[1],t))},${Math.round(lerp(A[2],B[2],t))})`}
+function hx(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+
+/* ---------- forest inference ---------- */
+function predictWith(M,x){
+  if(M.type==="linear"){
+    let s=M.intercept;
+    for(let i=0;i<x.length;i++) s += M.coef[i]*((x[i]-M.mean[i])/M.scale[i]);
+    return s;
+  }
+  if(M.type==="gb"){
+    let s=M.init;
+    for(let t=0;t<M.trees.length;t++){ const T=M.trees[t]; let n=0;
+      while(T.l[n]>=0) n = x[T.f[n]] <= T.t[n] ? T.l[n] : T.r[n]; s += M.lr*T.v[n]; }
+    return s;
+  }
+  let s=0;
+  for(let t=0;t<M.trees.length;t++){ const T=M.trees[t]; let n=0;
+    while(T.l[n]>=0) n = x[T.f[n]] <= T.t[n] ? T.l[n] : T.r[n]; s += T.v[n]; }
+  return s/M.trees.length;
+}
+function predict(x){ return predictWith(MODELS_[modelName], x); }
+const featOf = c => [c[S.ndvi],c[S.tree_canopy],c[S.builtup],c[S.impervious],
+                     c[S.water],c[S.albedo],c[S.bldg_height],c[S.elevation]];
+
+/* ---------- exact interventional Shapley over 2^8 coalitions ---------- */
+const FACT=[1]; for(let i=1;i<=NF;i++)FACT[i]=FACT[i-1]*i;
+const POPC=new Uint8Array(1<<NF); for(let i=1;i<(1<<NF);i++)POPC[i]=POPC[i>>1]+(i&1);
+function shapley(x,bgset){
+  const bgs=bgset||BG;
+  const M=1<<NF, val=new Float64Array(M), z=new Float64Array(NF);
+  for(let Sm=0;Sm<M;Sm++){
+    let acc=0;
+    for(let b=0;b<bgs.length;b++){
+      const bg=bgs[b];
+      for(let i=0;i<NF;i++) z[i] = (Sm>>i&1) ? x[i] : bg[i];
+      acc += predict(z);
+    }
+    val[Sm]=acc/bgs.length;
+  }
+  const phi=new Float64Array(NF);
+  for(let i=0;i<NF;i++){
+    const bit=1<<i;
+    for(let Sm=0;Sm<M;Sm++){
+      if(Sm&bit) continue;
+      const s=POPC[Sm];
+      phi[i] += FACT[s]*FACT[NF-s-1]/FACT[NF] * (val[Sm|bit]-val[Sm]);
+    }
+  }
+  return {phi:Array.from(phi), base:val[0], pred:val[M-1]};
+}
+
+/* ---------- units ---------- */
+function aggregate(cells){
+  const n=cells.length, f=new Array(NF).fill(0);
+  let lst=0,pop=0,vul=0;
+  for(const c of cells){ const x=featOf(c); for(let i=0;i<NF;i++) f[i]+=x[i];
+    lst+=c[S.lst]; pop+=c[S.population]; vul+=c[S.vulnerability]; }
+  for(let i=0;i<NF;i++) f[i]/=n;
+  return {cells, n, feat:f, lst:lst/n, pop, popd:pop/n, vul:vul/n,
+          risk:riskOf(lst/n, pop/n, vul/n)};
+}
+const byWard={}, byZone={};
+CELLS.forEach(c=>{ (byWard[c[S.ward]] ||= []).push(c); (byZone[c[S.zone]] ||= []).push(c); });
+const WARD_AGG = D.wards.map((w,i)=>({name:w, zone:D.zones[byWard[i]?byWard[i][0][S.zone]:0], ...aggregate(byWard[i])}));
+const ZONE_AGG = D.zones.map((z,i)=>({name:z, zone:z, ...aggregate(byZone[i])}));
+
+let unitMode="ward", viewMode="2d", layer="risk", selection=null, hoverCell=null;
+
+function unitFor(cell){
+  if(unitMode==="cell") return {name:`Cell r${cell[S.row]} c${cell[S.col]}`, zone:D.zones[cell[S.zone]],
+                                ...aggregate([cell])};
+  if(unitMode==="zone") return ZONE_AGG[cell[S.zone]];
+  return WARD_AGG[cell[S.ward]];
+}
+function unitKey(cell){ return unitMode==="cell"?`${cell[S.row]}_${cell[S.col]}`
+  : unitMode==="zone"? "z"+cell[S.zone] : "w"+cell[S.ward]; }
+function cellKey(c){ return unitKey(c); }
+
+/* ---------- layers ---------- */
+const LAYERS = [
+  {id:"risk",  label:"Heat risk score", unit:"", get:c=>riskOf(c[S.lst],c[S.population],c[S.vulnerability]), lo:0, hi:100, dec:0},
+  {id:"lst",   label:"Land surface temperature", unit:"°C", get:c=>c[S.lst], lo:30, hi:48, dec:1},
+  {id:"ndvi",  label:"Vegetation index (NDVI)", unit:"", get:c=>c[S.ndvi], lo:0.05, hi:0.66, dec:2, inv:true},
+  {id:"tree_canopy",label:"Tree canopy", unit:"%", get:c=>c[S.tree_canopy]*100, lo:0, hi:45, dec:0, inv:true},
+  {id:"builtup",label:"Built-up fraction", unit:"%", get:c=>c[S.builtup]*100, lo:5, hi:92, dec:0},
+  {id:"impervious",label:"Impervious surface", unit:"%", get:c=>c[S.impervious]*100, lo:5, hi:88, dec:0},
+  {id:"water", label:"Water coverage", unit:"%", get:c=>c[S.water]*100, lo:0, hi:20, dec:1, inv:true},
+  {id:"albedo",label:"Surface albedo", unit:"", get:c=>c[S.albedo], lo:0.09, hi:0.30, dec:2, inv:true},
+  {id:"bldg_height",label:"Mean building height", unit:"m", get:c=>c[S.bldg_height], lo:3, hi:34, dec:0},
+  {id:"population",label:"Population density", unit:"/km²", get:c=>c[S.population], lo:0, hi:45000, dec:0},
+  {id:"vulnerability",label:"Vulnerability proxy", unit:"", get:c=>c[S.vulnerability], lo:0.1, hi:0.95, dec:2},
+];
+const layerOf = id => LAYERS.find(l=>l.id===id);
+
+/* ================= MAP ================= */
+const cv=document.getElementById("map"), ctx=cv.getContext("2d");
+let dpr=1, MW=900, MH=760, reveal=0;
+const grid = {}; CELLS.forEach(c=>grid[c[S.row]+"_"+c[S.col]]=c);
+
+function resizeMap(){
+  const w = cv.parentElement.clientWidth;
+  MW = w; MH = Math.round(w*0.86);
+  dpr = Math.min(window.devicePixelRatio||1, 2);
+  cv.width = MW*dpr; cv.height = MH*dpr; cv.style.height = MH+"px";
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  draw();
+}
+function cellVal(c){ const L=layerOf(layer); return L.get(c); }
+function cellColor(c){
+  const L=layerOf(layer); let t=(L.get(c)-L.lo)/(L.hi-L.lo);
+  if(L.inv) t=1-t; return ramp(t);
+}
+function pos2d(r,c){
+  const pad=14, w=(MW-pad*2)/NCOL, h=(MH-pad*2)/NROW, s=Math.min(w,h);
+  const ox=(MW-s*NCOL)/2, oy=(MH-s*NROW)/2;
+  return {x:ox+c*s, y:oy+(NROW-1-r)*s, s, ox, oy};
+}
+function draw(){
+  ctx.clearRect(0,0,MW,MH);
+  if(viewMode==="2d") draw2d(); else draw3d();
+}
+function draw2d(){
+  const ranks = revealRank;
+  for(const c of CELLS){
+    if(ranks[c[S.row]+"_"+c[S.col]] > reveal) continue;
+    const p=pos2d(c[S.row],c[S.col]);
+    ctx.fillStyle=cellColor(c);
+    ctx.fillRect(p.x,p.y,p.s+0.6,p.s+0.6);
+  }
+  // unit outlines
+  ctx.lineWidth=1; ctx.strokeStyle=cssv("--rule");
+  ctx.globalAlpha=0.85;
+  for(const c of CELLS){
+    const k=cellKey(c), p=pos2d(c[S.row],c[S.col]);
+    const R=grid[(c[S.row]+1)+"_"+c[S.col]], L=grid[c[S.row]+"_"+(c[S.col]+1)];
+    ctx.beginPath();
+    if(!R || cellKey(R)!==k){ ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+p.s,p.y); }
+    if(!L || cellKey(L)!==k){ ctx.moveTo(p.x+p.s,p.y); ctx.lineTo(p.x+p.s,p.y+p.s); }
+    ctx.stroke();
+  }
+  ctx.globalAlpha=1;
+  // selection
+  if(selection){
+    ctx.strokeStyle=cssv("--ink"); ctx.lineWidth=2;
+    for(const c of selection.cells){
+      const k=cellKey(c), p=pos2d(c[S.row],c[S.col]);
+      const nb=[[1,0],[-1,0],[0,1],[0,-1]];
+      for(const [dr,dc] of nb){
+        const o=grid[(c[S.row]+dr)+"_"+(c[S.col]+dc)];
+        if(o && cellKey(o)===k) continue;
+        ctx.beginPath();
+        if(dr===1){ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+p.s,p.y)}
+        if(dr===-1){ctx.moveTo(p.x,p.y+p.s);ctx.lineTo(p.x+p.s,p.y+p.s)}
+        if(dc===1){ctx.moveTo(p.x+p.s,p.y);ctx.lineTo(p.x+p.s,p.y+p.s)}
+        if(dc===-1){ctx.moveTo(p.x,p.y);ctx.lineTo(p.x,p.y+p.s)}
+        ctx.stroke();
+      }
+    }
+  }
+  if(hoverCell){
+    const p=pos2d(hoverCell[S.row],hoverCell[S.col]);
+    ctx.strokeStyle=cssv("--ink"); ctx.lineWidth=1.5;
+    ctx.strokeRect(p.x+0.75,p.y+0.75,p.s-1.5,p.s-1.5);
+  }
+}
+function pos3d(r,c,h){
+  const ax=MW/(NCOL+NROW)*0.99, ay=ax*0.62, hz=0.60;
+  const ox=MW/2, oy=MH*0.13;
+  return {x:ox+(c-r)*ax, y:oy+(c+r)*ay - h*hz, ax, ay};
+}
+function draw3d(){
+  const order=[...CELLS].sort((a,b)=>(a[S.row]+a[S.col])-(b[S.row]+b[S.col]));
+  const hmax=34;
+  for(const c of order){
+    if(revealRank[c[S.row]+"_"+c[S.col]] > reveal) continue;
+    const hh = 6 + (c[S.bldg_height]/hmax)*90 * (0.5+0.5*c[S.builtup]);
+    const p=pos3d(c[S.row],c[S.col],hh), base=pos3d(c[S.row],c[S.col],0);
+    const col=cellColor(c);
+    // left face
+    ctx.fillStyle=shade(col,-0.30); ctx.beginPath();
+    ctx.moveTo(p.x-p.ax,p.y+p.ay); ctx.lineTo(p.x,p.y+p.ay*2);
+    ctx.lineTo(base.x,base.y+p.ay*2); ctx.lineTo(base.x-p.ax,base.y+p.ay); ctx.closePath(); ctx.fill();
+    // right face
+    ctx.fillStyle=shade(col,-0.15); ctx.beginPath();
+    ctx.moveTo(p.x+p.ax,p.y+p.ay); ctx.lineTo(p.x,p.y+p.ay*2);
+    ctx.lineTo(base.x,base.y+p.ay*2); ctx.lineTo(base.x+p.ax,base.y+p.ay); ctx.closePath(); ctx.fill();
+    // top
+    ctx.fillStyle=col; ctx.beginPath();
+    ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+p.ax,p.y+p.ay);
+    ctx.lineTo(p.x,p.y+p.ay*2); ctx.lineTo(p.x-p.ax,p.y+p.ay); ctx.closePath(); ctx.fill();
+    if(selection && selection.cells.includes(c)){
+      ctx.strokeStyle=cssv("--ink"); ctx.lineWidth=1.2; ctx.stroke();
+    }
+  }
+}
+function shade(rgb,k){
+  const m=rgb.match(/\d+/g).map(Number);
+  return `rgb(${m.map(v=>Math.round(clamp(v*(1+k),0,255))).join(",")})`;
+}
+function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+
+const revealRank={};
+(function(){ const s=[...CELLS].sort((a,b)=>a[S.lst]-b[S.lst]);
+  s.forEach((c,i)=>revealRank[c[S.row]+"_"+c[S.col]]=i/s.length); })();
+
+function pick(ev){
+  const r=cv.getBoundingClientRect();
+  const mx=(ev.touches?ev.touches[0].clientX:ev.clientX)-r.left;
+  const my=(ev.touches?ev.touches[0].clientY:ev.clientY)-r.top;
+  if(viewMode==="2d"){
+    const p=pos2d(0,0);
+    const col=Math.floor((mx-p.ox)/p.s), row=NROW-1-Math.floor((my-p.oy)/p.s);
+    return grid[row+"_"+col]||null;
+  }
+  let best=null,bd=1e9;
+  for(const c of CELLS){
+    const hh=6+(c[S.bldg_height]/34)*90*(0.5+0.5*c[S.builtup]);
+    const p=pos3d(c[S.row],c[S.col],hh);
+    const d=Math.hypot(mx-p.x,(my-p.y-p.ay))*1;
+    if(d<bd && d<p.ax){bd=d;best=c}
+  }
+  return best;
+}
+
+/* ================= UI ================= */
+function fmt(v,d){ return Number(v).toLocaleString("en-IN",{minimumFractionDigits:d,maximumFractionDigits:d}) }
+function el(id){return document.getElementById(id)}
+
+/* KPIs */
+function renderKpis(){
+  const all=aggregate(CELLS);
+  const risks=CELLS.map(c=>riskOf(c[S.lst],c[S.population],c[S.vulnerability]));
+  const hot=WARD_AGG.reduce((a,b)=>b.risk>a.risk?b:a);
+  let exposed=0; CELLS.forEach((c,i)=>{ if(risks[i]>=60) exposed+=c[S.population] });
+  const items=[
+    ["Analysis area", CELLS.length.toLocaleString("en-IN")+" km²", "1 km grid cells"],
+    ["Analysis wards", "40", "across 8 BBMP zones"],
+    ["Mean heat risk", fmt(risks.reduce((a,b)=>a+b)/risks.length,1), "index 0–100"],
+    ["Highest-risk ward", hot.name.replace("Bengaluru ","B. "), "risk "+fmt(hot.risk,0)],
+    ["Mean surface temp", fmt(all.lst,1)+" °C", "peak-season daytime"],
+    ["People in high risk", (exposed/1e6).toFixed(2)+" M", "risk ≥ 60"],
+  ];
+  el("kpis").innerHTML = items.map(([k,v,s])=>
+    `<div class="kpi"><div class="k">${k}</div><div class="v mono">${v}</div><div class="s">${s}</div></div>`).join("");
+}
+
+/* legend */
+function renderLegend(){
+  const L=layerOf(layer);
+  const stops = RAMP.map((c,i)=>`${L.inv?RAMP[RAMP.length-1-i]:c} ${i/(RAMP.length-1)*100}%`).join(",");
+  el("ramp").style.background=`linear-gradient(90deg,${stops})`;
+  const t=[0,0.25,0.5,0.75,1].map(f=>fmt(L.lo+(L.hi-L.lo)*f, L.dec));
+  el("rampticks").innerHTML = t.map((v,i)=>`<span class="mono">${v}${i===4?" "+L.unit:""}</span>`).join("");
+}
+
+/* readout */
+function renderReadout(c){
+  if(!c){ el("readout").innerHTML='<span>Hover the grid to inspect a cell. Click to select.</span>'; return }
+  const L=layerOf(layer);
+  el("readout").innerHTML =
+    `<span class="mono">${c[S.lat].toFixed(4)}°N ${c[S.lon].toFixed(4)}°E</span>
+     <span>${D.wards[c[S.ward]]}</span>
+     <span>${L.label} <b class="mono">${fmt(L.get(c),L.dec)}${L.unit}</b></span>
+     <span>LST <b class="mono">${c[S.lst].toFixed(1)}°C</b></span>
+     <span>NDVI <b class="mono">${c[S.ndvi].toFixed(2)}</b></span>`;
+}
+
+/* dial */
+function renderDial(risk){
+  const b=bandOf(risk), col=ramp(risk/100);
+  const R=34, C=2*Math.PI*R, frac=risk/100;
+  el("dial").innerHTML=`
+    <g transform="translate(43,43) rotate(-90)">
+      <circle r="${R}" fill="none" stroke="${cssv('--rule2')}" stroke-width="9"/>
+      <circle r="${R}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="butt"
+        stroke-dasharray="${(C*frac).toFixed(1)} ${C}"/>
+    </g>
+    <text x="43" y="42" text-anchor="middle" font-family="IBM Plex Mono" font-size="21"
+      font-weight="500" fill="${cssv('--ink')}">${risk.toFixed(0)}</text>
+    <text x="43" y="56" text-anchor="middle" font-family="IBM Plex Sans" font-size="9.5"
+      fill="${cssv('--ink3')}">/ 100</text>`;
+}
+
+/* ---------- selection render ---------- */
+let shapCache={};
+function render(){
+  if(!selection) return;
+  const u=selection;
+  el("selName").textContent=u.name;
+  el("selSub").textContent=`${u.zone} · ${u.n} km² · ${u.pop.toLocaleString("en-IN")} residents`;
+  const b=bandOf(u.risk);
+  const bd=el("selBand"); bd.textContent=CFG.names[b]+" heat risk";
+  bd.style.background=ramp(u.risk/100);
+  renderDial(u.risk);
+  const M=[
+    ["Surface temp", u.lst.toFixed(1)+" °C"], ["Hazard", hazardOf(u.lst).toFixed(0)],
+    ["Exposure", exposureOf(u.popd).toFixed(0)],
+    ["NDVI", u.feat[0].toFixed(2)], ["Tree canopy", (u.feat[1]*100).toFixed(0)+"%"],
+    ["Built-up", (u.feat[2]*100).toFixed(0)+"%"],
+    ["Impervious", (u.feat[3]*100).toFixed(0)+"%"], ["Water", (u.feat[4]*100).toFixed(1)+"%"],
+    ["Albedo", u.feat[5].toFixed(2)],
+  ];
+  el("mets").innerHTML=M.map(([k,v])=>`<div class="met"><div class="k">${k}</div><div class="v mono">${v}</div></div>`).join("");
+  renderWhy(); renderWho(); renderSim(true); renderForecast(); renderRecs();
+}
+
+function getShap(u){
+  const k=u.name+"|"+u.feat.map(v=>v.toFixed(3)).join(",");
+  if(!shapCache[k]) shapCache[k]=shapley(u.feat);
+  return shapCache[k];
+}
+
+function renderWhy(){
+  const u=selection, sh=getShap(u);
+  const k2r = CFG.wH*100/(CFG.lstHi-CFG.lstLo);   // °C -> risk points
+  const rows = sh.phi.map((v,i)=>({i,v,label:FL[i]})).sort((a,b)=>Math.abs(b.v)-Math.abs(a.v));
+  const mx = Math.max(...rows.map(r=>Math.abs(r.v)),0.2);
+  el("waterfall").innerHTML = rows.map(r=>{
+    const w = Math.abs(r.v)/mx*49;
+    const left = r.v>=0 ? 50 : 50-w;
+    return `<div class="wfrow">
+      <span>${r.label}</span>
+      <span class="wfbar"><u></u><i style="left:${left}%;width:${w}%;background:${r.v>=0?"var(--pos)":"var(--neg)"}"></i></span>
+      <span class="wfval mono" style="color:${r.v>=0?"var(--pos)":"var(--neg)"}">${r.v>=0?"+":"−"}${Math.abs(r.v).toFixed(2)}</span>
+    </div>`}).join("");
+  const top = rows.filter(r=>r.v>0).slice(0,3).map(r=>r.label.toLowerCase());
+  el("whyNote").innerHTML =
+    `City-average surface temperature is <b class="mono">${sh.base.toFixed(1)}°C</b>; the model puts this unit at
+     <b class="mono">${sh.pred.toFixed(1)}°C</b>. The bars are exact interventional Shapley values — they sum to the
+     <b class="mono">${(sh.pred-sh.base>=0?"+":"−")+Math.abs(sh.pred-sh.base).toFixed(2)}°C</b> gap. Positive bars push
+     temperature up. In risk points, 1 °C ≈ <b class="mono">${k2r.toFixed(1)}</b>.
+     The dominant upward drivers here are ${top.join(", ")}.`;
+}
+
+function renderWho(){
+  const u=selection;
+  const haz=hazardOf(u.lst), exp=exposureOf(u.popd);
+  const cityPop=CELLS.reduce((a,c)=>a+c[S.population],0);
+  const quad = haz>=60 && exp>=60 ? "hot and crowded — the priority combination"
+    : haz>=60 && exp<60 ? "hot but sparsely settled — a hazard without much exposure"
+    : haz<60 && exp>=60 ? "crowded but not among the hottest — exposure without extreme hazard"
+    : "neither extreme hazard nor extreme exposure";
+  const bars=[["Hazard (from surface temp)",haz],["Exposure (population density)",exp],
+              ["Vulnerability proxy",u.vul*100]];
+  el("whoBody").innerHTML = `
+    <div class="mets" style="grid-template-columns:repeat(2,1fr);margin:-13px -13px 13px">
+      <div class="met"><div class="k">Residents in unit</div><div class="v mono">${u.pop.toLocaleString("en-IN")}</div></div>
+      <div class="met"><div class="k">Density</div><div class="v mono">${Math.round(u.popd).toLocaleString("en-IN")}/km²</div></div>
+      <div class="met"><div class="k">Share of city population</div><div class="v mono">${(u.pop/cityPop*100).toFixed(2)}%</div></div>
+      <div class="met"><div class="k">People above risk 60</div><div class="v mono">${
+        u.cells.filter(c=>riskOf(c[S.lst],c[S.population],c[S.vulnerability])>=60)
+               .reduce((a,c)=>a+c[S.population],0).toLocaleString("en-IN")}</div></div>
+    </div>
+    <div class="wf">${bars.map(([k,v])=>`<div class="wfrow" style="grid-template-columns:150px 1fr 40px">
+      <span>${k}</span><span class="wfbar"><i style="left:0;width:${v}%;background:${ramp(v/100)}"></i></span>
+      <span class="wfval mono">${v.toFixed(0)}</span></div>`).join("")}</div>
+    <div class="note">This unit is <b>${quad}</b>. Hazard and exposure are kept separate on purpose: a hot
+    industrial cell with 300 residents and a moderately hot residential cell with 30,000 are not the same problem,
+    and collapsing them into one number hides that. The composite risk score weights them
+    ${(CFG.wH*100).toFixed(0)} / ${(CFG.wE*100).toFixed(0)} / ${(CFG.wV*100).toFixed(0)}.</div>`;
+}
+
+/* ---------- what-if ---------- */
+const LEVERS=[
+  {id:"ndvi",  f:0, label:"Green cover (NDVI)",  min:0, max:0.30, step:0.01, fmt:v=>"+"+v.toFixed(2)},
+  {id:"tree",  f:1, label:"Tree canopy",         min:0, max:0.30, step:0.01, pct:true},
+  {id:"roof",  f:5, label:"Cool / reflective roofs (albedo)", min:0, max:0.14, step:0.01, fmt:v=>"+"+v.toFixed(2)},
+  {id:"imp",   f:3, label:"De-paved surface",    min:0, max:0.30, step:0.01, pct:true, neg:true},
+  {id:"water", f:4, label:"Water bodies added",  min:0, max:0.12, step:0.005, pct:true},
+];
+const CAPS=[[0.02,0.80],[0.0,0.70],[0,1],[0.01,0.95],[0,0.35],[0.08,0.38],[0,100],[0,3000]];
+let lev={ndvi:0,tree:0,roof:0,imp:0,water:0};
+const SCEN={A:{ndvi:0.20,tree:0,roof:0,imp:0,water:0},
+            B:{ndvi:0,tree:0,roof:0.10,imp:0,water:0},
+            C:{ndvi:0.05,tree:0.15,roof:0,imp:0,water:0},
+            D:{ndvi:0.20,tree:0.15,roof:0.10,imp:0.10,water:0.02},
+            "0":{ndvi:0,tree:0,roof:0,imp:0,water:0}};
+
+function applyLevers(x,L){
+  const z=x.slice();
+  z[0]=clamp(z[0]+L.ndvi, ...CAPS[0]);
+  z[1]=clamp(z[1]+L.tree, ...CAPS[1]);
+  z[5]=clamp(z[5]+L.roof, ...CAPS[5]);
+  z[3]=clamp(z[3]-L.imp,  ...CAPS[3]);
+  z[4]=clamp(z[4]+L.water,...CAPS[4]);
+  return z;
+}
+function scenarioRisk(u,L,mdl){
+  const M = MODELS_[mdl||modelName];
+  let lst=0;
+  for(const c of u.cells) lst += predictWith(M, applyLevers(featOf(c),L));
+  lst/=u.cells.length;
+  return {lst, risk:riskOf(lst, u.popd, u.vul)};
+}
+function acrossModels(u,L){
+  return Object.keys(MODELS_).map(m=>{
+    const M=MODELS_[m];
+    let b=0,s=0;
+    for(const c of u.cells){ const x=featOf(c); b+=predictWith(M,x); s+=predictWith(M,applyLevers(x,L)); }
+    b/=u.cells.length; s/=u.cells.length;
+    return {model:m, delta: riskOf(s,u.popd,u.vul) - riskOf(b,u.popd,u.vul)};
+  });
+}
+function baselineModelRisk(u){
+  let lst=0; for(const c of u.cells) lst+=predict(featOf(c));
+  lst/=u.cells.length; return {lst, risk:riskOf(lst,u.popd,u.vul)};
+}
+function renderLevers(){
+  el("levers").innerHTML = LEVERS.map(l=>{
+    const v=lev[l.id];
+    const cur = selection ? selection.feat[l.f] : 0;
+    const shown = l.pct ? (l.neg?"−":"+")+(v*100).toFixed(0)+" pts" : l.fmt(v);
+    const now = l.pct||l.id==="water" ? (cur*100).toFixed(0)+"%" : cur.toFixed(2);
+    return `<div class="lev"><div class="levhd"><span>${l.label}</span>
+      <span class="mono">now ${now} · ${v>0?shown:"no change"}</span></div>
+      <input type="range" data-l="${l.id}" min="${l.min}" max="${l.max}" step="${l.step}" value="${v}"></div>`;
+  }).join("");
+  el("levers").querySelectorAll("input").forEach(i=>i.addEventListener("input",e=>{
+    lev[e.target.dataset.l]=parseFloat(e.target.value);
+    document.querySelectorAll("[data-sc]").forEach(b=>b.setAttribute("aria-pressed","false"));
+    renderLevers(); renderSim();
+  }));
+}
+function renderSim(rebuild){
+  if(rebuild) renderLevers();
+  const u=selection;
+  const b=baselineModelRisk(u), s=scenarioRisk(u,lev);
+  el("simBase").textContent=b.risk.toFixed(0);
+  el("simNew").textContent=s.risk.toFixed(0);
+  const d=s.risk-b.risk;
+  el("simDelta").textContent=(d>=0?"+":"−")+Math.abs(d).toFixed(1);
+  el("simDelta").style.color = d<0 ? "var(--neg)" : d>0 ? "var(--pos)" : "";
+  const any=Object.values(lev).some(v=>v>0);
+  el("simSummary").innerHTML = !any
+    ? `Move a lever or pick a scenario. The baseline shown is the <b>model's</b> score for this unit
+       (${b.lst.toFixed(1)}°C), which differs slightly from the observed-field score because the model
+       does not explain everything.`
+    : `Modelled surface temperature falls from <b class="mono">${b.lst.toFixed(1)}°C</b> to
+       <b class="mono">${s.lst.toFixed(1)}°C</b> (<b class="mono">${(s.lst-b.lst).toFixed(2)}°C</b>) across
+       ${u.n} km². <b>Scenario estimate, not a guaranteed outcome</b> — it assumes the intervention changes the
+       surface variables as specified and that the statistical relationship learned across the city holds locally.
+       Model MAE is ±${D.metrics.metrics.MAE.toFixed(2)}°C, which is the floor on how finely these differences
+       should be read.
+       <br><br><b>Across model classes:</b> ${acrossModels(u,lev).map(r=>
+         `${r.model.replace(" (baseline)","")} <span class="mono">${r.delta.toFixed(1)}</span>`).join(" · ")}.
+       The spread between them is structural uncertainty the error bars above do not capture; treat the
+       narrowest of the three as the safe claim.`;
+  drawScenarios(u,b);
+}
+function drawScenarios(u,b){
+  const keys=["0","A","B","C","D"], names=["Baseline","A Green","B Roofs","C Trees","D Combined"];
+  const vals=keys.map(k=> k==="0"? b.risk : scenarioRisk(u,SCEN[k]).risk);
+  const W=380,H=128,pad=26, bw=(W-pad*2)/keys.length;
+  const lo=Math.min(...vals)-4, hi=Math.max(...vals)+2;
+  let g="";
+  vals.forEach((v,i)=>{
+    const x=pad+i*bw+bw*0.16, w=bw*0.68;
+    const y=18+(1-(v-lo)/(hi-lo))*70, h=(88-y)+0;
+    g+=`<rect x="${x}" y="${y}" width="${w}" height="${88-y}" fill="${ramp(v/100)}" rx="1"/>
+        <text x="${x+w/2}" y="${y-4}" text-anchor="middle" font-family="IBM Plex Mono" font-size="11"
+          fill="${cssv('--ink')}">${v.toFixed(0)}</text>
+        <text x="${x+w/2}" y="104" text-anchor="middle" font-family="IBM Plex Sans" font-size="9"
+          fill="${cssv('--ink3')}">${names[i].split(" ")[0]}</text>
+        <text x="${x+w/2}" y="115" text-anchor="middle" font-family="IBM Plex Sans" font-size="9"
+          fill="${cssv('--ink3')}">${names[i].split(" ")[1]||""}</text>`;
+  });
+  el("scChart").innerHTML=g;
+}
+
+/* ---------- forecast ---------- */
+const MONTH=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const CLIM=[-2.0,0.2,2.9,4.3,3.4,-0.6,-2.6,-2.7,-1.7,-1.4,-2.2,-2.4]; // demo seasonal LST anomaly, °C
+const CLIM0=CLIM.reduce((a,b)=>a+b)/12;
+const TREND=0.030; // °C per year, order of magnitude from published BBMP LST trends
+function renderForecast(){
+  const u=selection, now=new Date(), m0=now.getMonth();
+  const ref=Math.max(...CLIM); // dataset LST represents peak-season conditions
+  const H=[1,3,6,12];
+  const pts=H.map(h=>{
+    const m=(m0+h)%12, yrs=h/12;
+    const mean=u.lst - (ref-CLIM[m]) + TREND*yrs;
+    const sd=0.9+1.3*Math.sqrt(yrs);
+    return {h, m, mean, lo:mean-1.2816*sd, hi:mean+1.2816*sd,
+            risk:riskOf(mean,u.popd,u.vul),
+            riskLo:riskOf(mean-1.2816*sd,u.popd,u.vul), riskHi:riskOf(mean+1.2816*sd,u.popd,u.vul)};
+  });
+  const W=380,Hh=190,L=34,R=10,T=14,B=34;
+  const all=[u.lst,...pts.flatMap(p=>[p.lo,p.hi])];
+  const lo=Math.min(...all)-1, hi=Math.max(...all)+1;
+  const X=i=>L+(i/(H.length))*(W-L-R);
+  const Y=v=>T+(1-(v-lo)/(hi-lo))*(Hh-T-B);
+  let band=`M ${X(0)} ${Y(u.lst)} `;
+  pts.forEach((p,i)=>band+=`L ${X(i+1)} ${Y(p.hi)} `);
+  for(let i=pts.length-1;i>=0;i--) band+=`L ${X(i+1)} ${Y(pts[i].lo)} `;
+  band+="Z";
+  let line=`M ${X(0)} ${Y(u.lst)} `+pts.map((p,i)=>`L ${X(i+1)} ${Y(p.mean)}`).join(" ");
+  let grid="";
+  for(let k=0;k<=3;k++){ const v=lo+(hi-lo)*k/3;
+    grid+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${cssv('--rule2')}"/>
+           <text x="${L-5}" y="${Y(v)+3}" text-anchor="end" font-family="IBM Plex Mono" font-size="9"
+             fill="${cssv('--ink3')}">${v.toFixed(0)}</text>`; }
+  let lab=`<text x="${X(0)}" y="${Hh-18}" text-anchor="middle" font-size="9" font-family="IBM Plex Sans"
+    fill="${cssv('--ink3')}">peak</text>
+    <text x="${X(0)}" y="${Hh-7}" text-anchor="middle" font-size="8.5" font-family="IBM Plex Sans"
+    fill="${cssv('--ink3')}">season</text>`;
+  pts.forEach((p,i)=>lab+=`<text x="${X(i+1)}" y="${Hh-18}" text-anchor="middle" font-size="9"
+    font-family="IBM Plex Sans" fill="${cssv('--ink3')}">${p.h}m</text>
+    <text x="${X(i+1)}" y="${Hh-7}" text-anchor="middle" font-size="8.5"
+    font-family="IBM Plex Sans" fill="${cssv('--ink3')}">${MONTH[p.m]}</text>`);
+  el("fcChart").innerHTML=`${grid}
+    <path d="${band}" fill="${cssv('--accent')}" opacity="0.14"/>
+    <path d="${line}" fill="none" stroke="${cssv('--accent')}" stroke-width="1.8"/>
+    ${pts.map((p,i)=>`<circle cx="${X(i+1)}" cy="${Y(p.mean)}" r="2.6" fill="${cssv('--accent')}"/>`).join("")}
+    <circle cx="${X(0)}" cy="${Y(u.lst)}" r="3" fill="${cssv('--ink')}"/>
+    ${lab}
+    <text x="${L}" y="10" font-size="9" font-family="IBM Plex Sans" fill="${cssv('--ink3')}">
+      surface temp °C, shaded band = 80% prediction interval</text>`;
+  el("fcTable").innerHTML=`<table style="margin-top:6px"><thead><tr><th>Horizon</th><th>Month</th>
+    <th>LST °C</th><th>80% interval</th><th>Risk</th></tr></thead><tbody>${
+    pts.map(p=>`<tr style="cursor:default"><td>${p.h} month${p.h>1?"s":""}</td><td>${MONTH[p.m]}</td>
+      <td class="mono">${p.mean.toFixed(1)}</td>
+      <td class="mono" style="color:var(--ink2)">${p.lo.toFixed(1)} – ${p.hi.toFixed(1)}</td>
+      <td class="mono">${p.risk.toFixed(0)}</td></tr>`).join("")}</tbody></table>`;
+  el("fcNote").innerHTML=`<b>Forecast basis:</b> the unit's peak-season surface temperature, shifted by a demo
+    monthly climatology and a warming trend of ${(TREND*10).toFixed(1)}°C per decade. It carries no weather
+    forecast and no land-cover change. Intervals widen with horizon and already exceed 2°C at one year, so the
+    12-month figure should be read as a direction of travel, not a number to plan around.
+    Replace the climatology with a real reanalysis series and the trend with a fitted Landsat time series before
+    using any of this operationally.`;
+}
+
+/* ---------- recommendations ---------- */
+const PHRASE=[["sparse vegetation","the existing greenness"],["thin tree canopy","the existing canopy"],
+  ["dense built-up fabric","the low built-up fraction"],["sealed impervious surface","the unsealed ground"],
+  ["very little open water","the nearby water"],["dark, low-albedo surfaces","the reflective surfaces"],
+  ["tall heat-trapping street canyons","the low building profile"],["elevation","elevation"]];
+const ACTIONS=[
+  {k:"tree", label:"Street-tree and canopy program",
+   dose:{ndvi:0.06,tree:0.10,roof:0,imp:0,water:0},
+   driver:[0,1], why:"canopy shades surfaces and adds evapotranspiration",
+   note:"Species and irrigation capacity decide whether canopy survives; budget for 3 years of upkeep."},
+  {k:"park", label:"Neighbourhood parks and open green",
+   dose:{ndvi:0.12,tree:0.05,roof:0,imp:0.05,water:0},
+   driver:[0,3], why:"converts sealed ground to vegetated ground",
+   note:"Needs land acquisition; the model cannot tell you where land is actually available."},
+  {k:"roof", label:"Cool and reflective roof retrofit",
+   dose:{ndvi:0,tree:0,roof:0.10,imp:0,water:0},
+   driver:[5,2], why:"raises albedo so less shortwave radiation is absorbed",
+   note:"Effect scales with roof area, so it is strongest exactly where built-up fraction is highest."},
+  {k:"pave", label:"Permeable and lighter paving",
+   dose:{ndvi:0,tree:0,roof:0.02,imp:0.10,water:0},
+   driver:[3,2], why:"reduces sealed, heat-storing surface",
+   note:"Only viable on low-load surfaces: footpaths, parking, service lanes."},
+  {k:"water", label:"Lake restoration and water features",
+   dose:{ndvi:0.02,tree:0,roof:0,imp:0,water:0.03},
+   driver:[4], why:"open water and wet soil buffer daytime heating",
+   note:"Bengaluru's lake network is the obvious lever here, but inflow quality governs whether it is feasible."},
+];
+function renderRecs(){
+  const u=selection, sh=getShap(u);
+  el("recWhere").textContent=u.name;
+  const scored=ACTIONS.map(a=>{
+    const s=scenarioRisk(u,a.dose), b=baselineModelRisk(u);
+    const rel=Math.max(...a.driver.map(d=>sh.phi[d]));
+    return {...a, dRisk:s.risk-b.risk, dLst:s.lst-b.lst, rel};
+  }).sort((x,y)=>x.dRisk-y.dRisk);
+  el("recs").innerHTML=scored.map(a=>{
+    const d=a.driver.map(i=>`${PHRASE[i][sh.phi[i]>=0?0:1]} (${sh.phi[i]>=0?"+":"−"}${Math.abs(sh.phi[i]).toFixed(2)}°C)`).join(" and ");
+    return `<div class="rec" style="border-left-color:${a.dRisk<-1?"var(--neg)":"var(--rule)"}">
+      <h3>${a.label}</h3>
+      <p>Targets ${d} here. Mechanism: ${a.why}.</p>
+      <div class="eff mono">modelled Δ risk <b style="color:${a.dRisk<0?"var(--neg)":"var(--pos)"}">${a.dRisk.toFixed(1)}</b>
+        · Δ LST ${a.dLst.toFixed(2)}°C</div>
+      <p style="font-size:11.5px;color:var(--ink3);margin-top:4px">${a.note}</p></div>`}).join("")
+    + `<div class="note">Ranking reflects modelled effect for a fixed dose in this unit only, and says nothing
+       about cost, land availability or delivery time. A planner should read it as "what the physics of this
+       place favours", then apply the constraints the model has no knowledge of.</div>`;
+  const W=380,Hh=Math.max(120,scored.length*26+20);
+  const mx=Math.max(...scored.map(a=>Math.abs(a.dRisk)),1);
+  el("recChart").innerHTML=`<svg width="100%" height="${Hh}" viewBox="0 0 ${W} ${Hh}">
+    <text x="0" y="10" font-size="9.5" font-family="IBM Plex Sans" fill="${cssv('--ink3')}">
+      modelled change in heat-risk score (lower is better)</text>
+    ${scored.map((a,i)=>{
+      const y=22+i*26, w=Math.abs(a.dRisk)/mx*(W-150);
+      return `<text x="0" y="${y+10}" font-size="10.5" font-family="IBM Plex Sans"
+        fill="${cssv('--ink2')}">${a.label.split(" ").slice(0,3).join(" ")}</text>
+        <rect x="140" y="${y}" width="${w}" height="13" fill="${a.dRisk<0?"var(--neg)":"var(--pos)"}" rx="1"/>
+        <text x="${145+w}" y="${y+11}" font-size="10" font-family="IBM Plex Mono"
+          fill="${cssv('--ink2')}">${a.dRisk.toFixed(1)}</text>`}).join("")}
+  </svg>`;
+}
+
+/* ---------- comparison table ---------- */
+const COLS=[
+  {k:"name", t:"Analysis ward", f:r=>r.name},
+  {k:"risk", t:"Heat risk", f:r=>r.risk.toFixed(0), bar:true},
+  {k:"lst",  t:"LST °C", f:r=>r.lst.toFixed(1)},
+  {k:"ndvi", t:"NDVI", f:r=>r.feat[0].toFixed(2)},
+  {k:"built",t:"Built-up", f:r=>(r.feat[2]*100).toFixed(0)+"%"},
+  {k:"imp",  t:"Impervious", f:r=>(r.feat[3]*100).toFixed(0)+"%"},
+  {k:"tree", t:"Canopy", f:r=>(r.feat[1]*100).toFixed(0)+"%"},
+  {k:"popd", t:"Density /km²", f:r=>Math.round(r.popd).toLocaleString("en-IN")},
+  {k:"pop",  t:"Population", f:r=>r.pop.toLocaleString("en-IN")},
+];
+let sortK="risk", sortDir=-1;
+function sortVal(r,k){ return {name:r.name, risk:r.risk, lst:r.lst, ndvi:r.feat[0],
+  built:r.feat[2], imp:r.feat[3], tree:r.feat[1], popd:r.popd, pop:r.pop}[k]; }
+function renderTable(){
+  const t=el("cmp");
+  t.querySelector("thead").innerHTML="<tr>"+COLS.map(c=>
+    `<th data-k="${c.k}">${c.t}${sortK===c.k?(sortDir<0?" ▾":" ▴"):""}</th>`).join("")+"</tr>";
+  const rows=[...WARD_AGG].sort((a,b)=>{
+    const x=sortVal(a,sortK), y=sortVal(b,sortK);
+    return (typeof x==="string" ? x.localeCompare(y) : x-y)*sortDir; });
+  t.querySelector("tbody").innerHTML=rows.map(r=>`<tr data-w="${r.name}"
+    aria-selected="${selection&&selection.name===r.name}">`+
+    COLS.map(c=>`<td class="${c.k==='name'?'':'mono'}">${
+      c.bar?`<span class="bar" style="width:${r.risk*0.42}px;background:${ramp(r.risk/100)}"></span>`:""}${c.f(r)}</td>`).join("")
+    +"</tr>").join("");
+  t.querySelectorAll("th").forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k; if(sortK===k) sortDir*=-1; else {sortK=k; sortDir=k==="name"?1:-1}
+    renderTable();});
+  t.querySelectorAll("tbody tr").forEach(tr=>tr.onclick=()=>{
+    unitMode="ward"; syncSeg("unitSeg","u","ward");
+    selection=WARD_AGG.find(w=>w.name===tr.dataset.w);
+    lev={ndvi:0,tree:0,roof:0,imp:0,water:0}; render(); renderTable(); draw();});
+}
+
+/* ---------- global XAI + perf + method ---------- */
+const BG_SMALL = BG.filter((_,i)=>i%3===0);
+let globalAgg=null, globalN=0;
+function paintGlobal(){
+  if(!globalAgg) return;
+  const rows=globalAgg.map((v,i)=>({v:v/Math.max(globalN,1),label:FL[i]})).sort((a,b)=>b.v-a.v);
+  const mx=rows[0].v||1;
+  el("globalXai").innerHTML=`<div class="wf">`+rows.map(r=>
+    `<div class="wfrow" style="grid-template-columns:150px 1fr 54px"><span>${r.label}</span>
+     <span class="wfbar"><i style="left:0;width:${r.v/mx*100}%;background:${cssv('--accent')}"></i></span>
+     <span class="wfval mono">${r.v.toFixed(2)}°C</span></div>`).join("")+`</div>`;
+}
+function renderGlobal(){
+  const sample=[]; const step=Math.ceil(CELLS.length/18);
+  for(let i=0;i<CELLS.length;i+=step) sample.push(featOf(CELLS[i]));
+  globalAgg=new Array(NF).fill(0); globalN=0;
+  el("globalXai").innerHTML='<div class="note" style="margin:0">Computing Shapley values across the city…</div>';
+  (function chunk(){
+    const s=shapley(sample[globalN],BG_SMALL);
+    s.phi.forEach((v,i)=>globalAgg[i]+=Math.abs(v));
+    globalN++;
+    paintGlobal();
+    if(globalN<sample.length) requestAnimationFrame(chunk);
+  })();
+}
+function renderPerf(){
+  const m=D.metrics;
+  el("perf").innerHTML=`
+    <table><thead><tr><th>Model</th><th>MAE °C</th><th>RMSE °C</th><th>R² spatial</th><th>± sd</th><th>R² random</th></tr></thead>
+    <tbody>${m.comparison.map(r=>`<tr style="cursor:default${r.model===modelName?';font-weight:600':''}">
+      <td>${r.model}${r.model===m.selected?" ✓":""}${r.model===modelName?" ●":""}</td>
+      <td class="mono">${r.spatial_MAE.toFixed(3)}</td><td class="mono">${r.spatial_RMSE.toFixed(3)}</td>
+      <td class="mono">${r.spatial_R2.toFixed(3)}</td>
+      <td class="mono" style="color:var(--ink3)">${(r.spatial_R2_sd||0).toFixed(3)}</td>
+      <td class="mono" style="color:var(--ink3)">${r.random_R2.toFixed(3)}</td></tr>`).join("")}</tbody></table>
+    <div class="note">Target is land surface temperature in °C, not the risk score — see the method note on why.
+    ✓ marks the selected model, ● the one currently driving this page; switch it in the map toolbar and watch the
+    explanations and scenario estimates move. If a recommendation only survives under one model class, it is not
+    a robust finding.
+    <br><br>The right-hand column is what a random 5-fold split would have reported. Neighbouring 1 km cells are
+    strongly autocorrelated, so a random split lets each model memorise its test cells' surroundings; the headline
+    figures instead hold out 16 contiguous spatial blocks, averaged over five different ways of cutting the city
+    (the sd column). Under that test the linear baseline beats both tree ensembles — trees cannot extrapolate past
+    the leaf ranges they were grown on, which is exactly what a held-out block demands, while the ensembles keep
+    their edge on the random split where extrapolation is never required. Five-band hazard agreement on held-out
+    blocks is ${(m.band_agreement*100).toFixed(0)}%.</div>`;
+}
+function renderMethod(){
+  const p=D.meta.provenance||{}, real=(D.meta.mode||"").toLowerCase()==="real";
+  const srcRows = real
+    ? Object.entries(p.sources||{}).map(([k,v])=>
+        `<dt><span class="tag real">real</span>${k}</dt><dd>${v}</dd>`).join("")
+      + (p.landsat ? `<dt>Currency</dt><dd>${p.landsat.scenes} Landsat scenes over
+          ${p.composite_window.start} to ${p.composite_window.end}, most recent clear scene
+          <b>${p.landsat.most_recent_scene}</b>, median
+          ${Math.round(p.landsat.median_clear_obs_per_unit)} clear observations per unit.
+          A composite is not a realtime observation — that date is how current this map is.</dd>` : "")
+    : `<dt><span class="tag real">real</span></dt><dd>${(p.real||[]).join("; ")}</dd>
+       <dt><span class="tag sim">simulated</span></dt><dd>${(p.simulated||[]).join("; ")}</dd>`;
+  const caveats = (p.caveats||[]).length
+    ? `<dt>Caveats</dt><dd>${p.caveats.join(" ")}</dd>` : "";
+  el("methodBody").innerHTML=`
+  <div class="two">
+    <div>
+      <h3 style="margin-bottom:8px">Where the numbers come from</h3>
+      <dl class="prov">
+        ${srcRows}${caveats}
+        <dt>Grid</dt><dd>${D.meta.n_cells} cells of ${D.meta.cell_km} km, analysis CRS ${D.meta.crs_analysis},
+          display ${D.meta.crs_display}</dd>
+        <dt>Wards</dt><dd>${real ? (p.units||"supplied boundaries")
+          : "40 analysis wards derived by sectoring the 8 BBMP zones — <b>not</b> statutory wards"}.
+          Bengaluru's administrative geography has moved: the Greater Bengaluru Governance Act 2024
+          took effect in 2025, abolished BBMP and replaced it with five City Corporations under the
+          Greater Bengaluru Authority, redelimiting the 198 wards into 369. The zone names here are the
+          old BBMP ones, which is what the stable open boundary data still uses. Pick a vintage
+          deliberately: a 2019 temperature composite joined to 2025 wards needs saying out loud.</dd>
+        <dt>Model</dt><dd>${Object.keys(MODELS_).join(", ")} — all three exported to the browser, so
+          inference, Shapley attribution and scenario simulation run client-side and can be re-run under a
+          different model class without a round trip</dd>
+      </dl>
+      <h3 style="margin:16px 0 8px">Why the model predicts temperature, not risk</h3>
+      <p style="font-size:12.5px;color:var(--ink2);margin:0">
+        There is no measurable ground truth called "heat risk". Training a model on a risk index you invented
+        makes it learn your own formula and every accuracy figure becomes circular. So the learned step targets
+        land surface temperature, which is measurable and falsifiable, and the value-laden step — combining
+        hazard with exposure and vulnerability — is a stated arithmetic formula you can argue with:</p>
+      <p class="mono formula" style="font-size:12px;background:var(--panel2);border:1px solid var(--rule2);
+        border-radius:4px;padding:9px;margin-top:8px">
+        hazard&nbsp;&nbsp;&nbsp;= 100 × (LST − ${CFG.lstLo}) / (${CFG.lstHi} − ${CFG.lstLo})<br>
+        exposure&nbsp;= 100 × minmax(log(1 + population density))<br>
+        risk&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= ${CFG.wH} × hazard + ${CFG.wE} × exposure + ${CFG.wV} × vulnerability<br>
+        bands&nbsp;&nbsp;&nbsp;&nbsp;= ${CFG.bands.join(" / ")}
+      </p>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">What this prototype cannot tell you</h3>
+      <ul style="font-size:12.5px;color:var(--ink2);margin:0;padding-left:18px;line-height:1.65">
+        <li>Any absolute temperature for a real Bengaluru address. The surface field is generated, calibrated
+            only so its distribution matches published city statistics (≈29.9–48 °C, mean ≈38.6 °C).</li>
+        <li>How much a real intervention will cool a real street. The simulator propagates a change in surface
+            variables through a statistical model fitted to spatial variation. Spatial contrast is not the same
+            as the effect of changing one place over time.</li>
+        <li>Who is vulnerable. The vulnerability term is a crude proxy built from density, greenness and sealed
+            surface. Real vulnerability needs age structure, income, housing type, occupational exposure and
+            health data — none of which is present.</li>
+        <li>Anything at sub-kilometre scale. A 1 km cell averages over entire neighbourhoods; a shaded lane and
+            an exposed junction inside the same cell are indistinguishable here.</li>
+      </ul>
+      <h3 style="margin:16px 0 8px">What "realtime" can and cannot mean here</h3>
+      <p style="font-size:12.5px;color:var(--ink2);margin:0">
+        Land surface temperature is not a realtime quantity. Landsat 8 and 9 together give a nominal
+        8-day revisit at a ~10:30 overpass, and monsoon cloud removes several consecutive passes, so a
+        usable clear-sky field needs a multi-week composite. This map therefore describes slow-moving
+        surface structure, and its currency is the date of the most recent clear scene.<br><br>
+        What does update continuously is the atmosphere. <span class="mono">pipeline/weather.py</span>
+        pulls current air temperature, apparent temperature, humidity and wind from Open-Meteo every
+        fifteen minutes and combines them with a ward's structural score into an
+        <b>advisory</b> — a statement about whether this place's known disadvantage is being stressed
+        today. That runs against the API service, not inside this published page, which cannot reach
+        external hosts. Air temperature at 2 m and land surface temperature differ by many degrees on a
+        clear afternoon and are never interchangeable.<br><br>
+        Everything on this page turns satellite data into <i>numbers</i> — it never shows a satellite
+        <i>picture</i>. The repository includes <span class="mono">web/satellite_viewer.html</span>, the
+        same grid and risk layers drawn over real NASA GIBS and Esri imagery. It can't run inside this
+        published page for the same reason the weather API can't — the platform blocks all network
+        requests except scripts from a handful of whitelisted CDNs, and map tiles are not scripts. Download
+        it from the project repository and open it directly in a browser, or host it yourself.</p>
+    </div>
+  </div>`;
+}
+
+/* ---------- wiring ---------- */
+function syncSeg(id,attr,val){
+  el(id).querySelectorAll("button").forEach(b=>
+    b.setAttribute("aria-pressed", String(b.dataset[attr]===val)));
+}
+el("layerSel").innerHTML=LAYERS.map(l=>`<option value="${l.id}">${l.label}</option>`).join("");
+el("layerSel").onchange=e=>{layer=e.target.value; renderLegend(); draw(); renderReadout(hoverCell)};
+el("modelSel").innerHTML=Object.keys(MODELS_).map(m=>
+  `<option value="${m}"${m===modelName?" selected":""}>${m}</option>`).join("");
+el("modelSel").onchange=e=>{ modelName=e.target.value; shapCache={};
+  render(); renderPerf(); renderGlobal(); };
+el("viewSeg").onclick=e=>{const b=e.target.closest("button"); if(!b)return;
+  viewMode=b.dataset.v; syncSeg("viewSeg","v",viewMode); draw()};
+el("unitSeg").onclick=e=>{const b=e.target.closest("button"); if(!b)return;
+  unitMode=b.dataset.u; syncSeg("unitSeg","u",unitMode);
+  if(selection) selection=unitFor(selection.cells[0]);
+  lev={ndvi:0,tree:0,roof:0,imp:0,water:0}; render(); draw()};
+el("tabs").onclick=e=>{const b=e.target.closest("button"); if(!b)return;
+  el("tabs").querySelectorAll("button").forEach(x=>x.setAttribute("aria-selected",String(x===b)));
+  document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on",p.id==="pane-"+b.dataset.p))};
+document.querySelectorAll("[data-sc]").forEach(b=>b.onclick=()=>{
+  lev={...SCEN[b.dataset.sc]};
+  document.querySelectorAll("[data-sc]").forEach(x=>x.setAttribute("aria-pressed",String(x===b&&b.dataset.sc!=="0")));
+  renderSim(true)});
+cv.addEventListener("mousemove",e=>{const c=pick(e); if(c!==hoverCell){hoverCell=c; renderReadout(c); draw()}});
+cv.addEventListener("mouseleave",()=>{hoverCell=null; renderReadout(null); draw()});
+cv.addEventListener("click",e=>{const c=pick(e); if(!c)return;
+  selection=unitFor(c); lev={ndvi:0,tree:0,roof:0,imp:0,water:0}; render(); renderTable(); draw()});
+el("themeBtn").onclick=()=>{
+  const dark=document.documentElement.getAttribute("data-theme")==="dark";
+  document.documentElement.setAttribute("data-theme",dark?"light":"dark");
+  el("themeBtn").textContent=dark?"Dark":"Light";
+  try{localStorage.setItem("uhdt-theme",dark?"light":"dark")}catch(_){}
+  renderLegend(); render(); renderTable(); renderGlobal(); draw();
+};
+try{const t=localStorage.getItem("uhdt-theme");
+  if(t) document.documentElement.setAttribute("data-theme",t);
+}catch(_){}
+(function(){ const attr=document.documentElement.getAttribute("data-theme");
+  const dark = attr ? attr==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  if(!attr) document.documentElement.setAttribute("data-theme", dark?"dark":"light");
+  el("themeBtn").textContent = dark ? "Light" : "Dark"; })();
+window.addEventListener("resize",()=>{clearTimeout(window._rz);window._rz=setTimeout(resizeMap,120)});
+
+/* boot */
+el("subhead").textContent = `${CELLS.length} km² · 1 km analysis grid · ${D.zones.length} BBMP zones · ${D.wards.length} analysis wards`;
+(function(){ const real = (D.meta.mode||"").toLowerCase()==="real";
+  el("provChipText").textContent = real
+    ? `Landsat/Sentinel-2 composite${D.meta.provenance.landsat ? " · latest scene "+D.meta.provenance.landsat.most_recent_scene : ""}`
+    : "Demo dataset — not satellite observations";
+  el("provChip").querySelector(".dot").style.background = real ? "#2E7A72" : "#C8873A";
+})();
+renderKpis(); renderLegend(); renderTable(); renderPerf(); renderMethod();
+selection = WARD_AGG.reduce((a,b)=>b.risk>a.risk?b:a);
+render(); renderTable();
+resizeMap();
+setTimeout(renderGlobal, 60);
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+if(reduced){ reveal=1; draw(); }
+else{
+  const t0=performance.now();
+  (function anim(){ const p=Math.min(1,(performance.now()-t0)/1100);
+    reveal=p*1.02; draw(); if(p<1) requestAnimationFrame(anim); })();
+}
+})();
+</script>
+</body>
+</html>

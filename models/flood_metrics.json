@@ -1,0 +1,114 @@
+{
+ "scheme": "spatial blocks (KMeans, 16 blocks, 8 folds) x 5 partitions",
+ "metrics": {
+  "null (area only)": {
+   "d2_vs_null": {
+    "mean": 0.0,
+    "sd": 0.0
+   },
+   "auc_flagged": {
+    "mean": 0.6151,
+    "sd": 0.0028
+   },
+   "auc_lowlying_heldout": {
+    "mean": 0.6983,
+    "sd": 0.0015
+   },
+   "spearman_density": {
+    "mean": null,
+    "sd": null
+   }
+  },
+  "catchment only": {
+   "d2_vs_null": {
+    "mean": -0.0062,
+    "sd": 0.0027
+   },
+   "auc_flagged": {
+    "mean": 0.6116,
+    "sd": 0.0025
+   },
+   "auc_lowlying_heldout": {
+    "mean": 0.6974,
+    "sd": 0.0023
+   },
+   "spearman_density": {
+    "mean": -0.3246,
+    "sd": 0.0465
+   }
+  },
+  "cascade only": {
+   "d2_vs_null": {
+    "mean": 0.0159,
+    "sd": 0.0119
+   },
+   "auc_flagged": {
+    "mean": 0.6464,
+    "sd": 0.0074
+   },
+   "auc_lowlying_heldout": {
+    "mean": 0.7159,
+    "sd": 0.005
+   },
+   "spearman_density": {
+    "mean": 0.2113,
+    "sd": 0.0478
+   }
+  },
+  "static only": {
+   "d2_vs_null": {
+    "mean": 0.1932,
+    "sd": 0.037
+   },
+   "auc_flagged": {
+    "mean": 0.5927,
+    "sd": 0.0081
+   },
+   "auc_lowlying_heldout": {
+    "mean": 0.6964,
+    "sd": 0.0046
+   },
+   "spearman_density": {
+    "mean": 0.1136,
+    "sd": 0.0206
+   }
+  },
+  "full (ridge)": {
+   "d2_vs_null": {
+    "mean": 0.2244,
+    "sd": 0.028
+   },
+   "auc_flagged": {
+    "mean": 0.641,
+    "sd": 0.011
+   },
+   "auc_lowlying_heldout": {
+    "mean": 0.7159,
+    "sd": 0.0057
+   },
+   "spearman_density": {
+    "mean": 0.2415,
+    "sd": 0.0129
+   }
+  },
+  "full (boosted trees)": {
+   "d2_vs_null": {
+    "mean": 0.1821,
+    "sd": 0.0303
+   },
+   "auc_flagged": {
+    "mean": 0.6253,
+    "sd": 0.0109
+   },
+   "auc_lowlying_heldout": {
+    "mean": 0.6375,
+    "sd": 0.0168
+   },
+   "spearman_density": {
+    "mean": 0.2769,
+    "sd": 0.0152
+   }
+  }
+ },
+ "null_auc_flagged": 0.6151
+}

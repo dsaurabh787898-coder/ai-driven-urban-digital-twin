@@ -1,0 +1,42 @@
+{
+  "selected": "Ridge (baseline)",
+  "metrics": {
+    "spatial_MAE": 0.41770049783626495,
+    "spatial_RMSE": 0.5437474043369133,
+    "spatial_R2": 0.7389126208001717,
+    "MAE": 0.40305674206864556
+  },
+  "band_agreement": 0.9040404040404041,
+  "comparison": [
+    {
+      "model": "Ridge (baseline)",
+      "spatial_MAE": 0.41770049783626495,
+      "spatial_RMSE": 0.5437474043369133,
+      "spatial_R2": 0.7389126208001717,
+      "spatial_R2_sd": 0.008705584906940237,
+      "random_MAE": 0.4115729594856707,
+      "random_RMSE": 0.5412201818561011,
+      "random_R2": 0.7414057285579865
+    },
+    {
+      "model": "Random Forest",
+      "spatial_MAE": 0.46088940724228633,
+      "spatial_RMSE": 0.5901383680257293,
+      "spatial_R2": 0.6924837891438412,
+      "spatial_R2_sd": 0.008776802638811428,
+      "random_MAE": 0.44075100746581836,
+      "random_RMSE": 0.5661812731954672,
+      "random_R2": 0.717002932330598
+    },
+    {
+      "model": "Gradient Boosting",
+      "spatial_MAE": 0.46099764202944105,
+      "spatial_RMSE": 0.5870953514501459,
+      "spatial_R2": 0.695591728613852,
+      "spatial_R2_sd": 0.012069042766226307,
+      "random_MAE": 0.4239058116824415,
+      "random_RMSE": 0.5601217728947461,
+      "random_R2": 0.7230280149161636
+    }
+  ]
+}

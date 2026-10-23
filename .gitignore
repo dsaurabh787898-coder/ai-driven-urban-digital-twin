@@ -1,0 +1,31 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Logs and temporary files
+*.log
+logs/
+outputs/
+runs/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Project archives
+*.zip
+*.7z

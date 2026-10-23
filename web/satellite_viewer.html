@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bengaluru Heat Twin — Satellite Basemap Viewer</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{
+  --ink:#16262A; --ink2:#5B6D70; --ink3:#87979A; --paper:#EDF0EC; --panel:#FBFCFA;
+  --rule:#D2D9D1; --accent:#0E5257;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:13.5px;color:var(--ink);background:var(--paper)}
+.mono{font-family:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace}
+#app{display:flex;flex-direction:column;height:100%}
+header{background:var(--panel);border-bottom:1px solid var(--rule);padding:10px 16px;
+  display:flex;gap:14px;align-items:center;flex-wrap:wrap;z-index:1000}
+header h1{font-size:15px;margin:0;font-weight:600}
+header p{margin:0;font-size:11.5px;color:var(--ink2)}
+.warn{background:#fff4e5;border:1px solid #e8b978;border-radius:6px;padding:8px 14px;
+  font-size:12px;color:#7a4a12;margin:0;line-height:1.5}
+.warn b{color:#5c3300}
+#wrap{flex:1;display:grid;grid-template-columns:1fr 300px;min-height:0}
+#map{width:100%;height:100%;background:#0b1416}
+#side{background:var(--panel);border-left:1px solid var(--rule);overflow-y:auto;padding:14px}
+#side h2{font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink2);
+  margin:0 0 8px}
+.grp{margin-bottom:18px}
+label.opt{display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 0;cursor:pointer}
+input[type=radio],input[type=checkbox]{accent-color:var(--accent)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+input[type=date],select{font:inherit;font-size:12.5px;padding:5px 7px;border:1px solid var(--rule);
+  border-radius:5px;background:#fff;width:100%}
+.sub{font-size:11px;color:var(--ink3);margin:2px 0 0 24px;line-height:1.4}
+.card{background:#fff;border:1px solid var(--rule);border-radius:6px;padding:10px;margin-bottom:12px}
+.card h3{margin:0 0 4px;font-size:12.5px}
+.card p{margin:0;font-size:11.5px;color:var(--ink2);line-height:1.5}
+#legend{height:9px;border-radius:2px;border:1px solid var(--rule);margin-top:4px}
+#legendticks{display:flex;justify-content:space-between;font-size:10px;color:var(--ink3)}
+#pick{font-size:12px;line-height:1.6}
+#pick .row{display:flex;justify-content:space-between;border-bottom:1px solid var(--rule);padding:3px 0}
+.leaflet-popup-content{font-size:12.5px;line-height:1.6;font-family:inherit}
+a{color:var(--accent)}
+footer{padding:7px 16px;font-size:10.5px;color:var(--ink3);border-top:1px solid var(--rule);
+  background:var(--panel)}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div><h1>Satellite basemap — Bengaluru heat digital twin</h1>
+      <p>Real NASA / Esri imagery under the same grid, ward and risk data as the main twin.</p></div>
+  </header>
+  <p class="warn"><b>Run this file locally or on your own server — it will not load inside claude.ai's
+    published-artifact preview.</b> That sandbox only permits scripts from a handful of whitelisted CDNs and
+    blocks every other network request, including the map tiles this page needs from NASA and Esri. Leaflet
+    itself loads from cdnjs.cloudflare.com (allowed); the imagery tiles come from
+    <span class="mono">gibs.earthdata.nasa.gov</span> and <span class="mono">server.arcgisonline.com</span>
+    (blocked there). Double-click this file, or serve it with <span class="mono">python3 -m http.server</span>
+    and open it in a normal browser tab, and every tile below is a real satellite image.</p>
+  <div id="wrap">
+    <div id="map"></div>
+    <div id="side">
+      <div class="grp">
+        <h2>Satellite basemap</h2>
+        <label class="opt"><input type="radio" name="base" value="esri" checked> Esri World Imagery</label>
+        <div class="sub">High-resolution composite, refreshed periodically (not dated). Best for context —
+          buildings, roads, tree cover are visible.</div>
+        <label class="opt"><input type="radio" name="base" value="modis_terra"> MODIS Terra true colour</label>
+        <div class="sub">NASA GIBS, ~250 m/px, one pass per day. Genuinely daily, but coarse and often
+          cloud-affected in Bengaluru's wet months.</div>
+        <label class="opt"><input type="radio" name="base" value="modis_aqua"> MODIS Aqua true colour</label>
+        <div class="sub">Same product, afternoon overpass (~13:30 local) instead of Terra's morning pass.</div>
+        <label class="opt"><input type="radio" name="base" value="viirs"> VIIRS true colour</label>
+        <div class="sub">NASA GIBS, ~375 m/px — sharper than MODIS, still daily.</div>
+        <label class="opt"><input type="radio" name="base" value="lst"> MODIS LST (day), satellite-derived</label>
+        <div class="sub">NASA's own land-surface-temperature product, colourised, ~1 km/px. This is a
+          <b>different, independent</b> LST source from the Landsat-based pipeline in this project — a rough
+          cross-check, not the same measurement.</div>
+        <label class="opt"><input type="radio" name="base" value="osm"> OpenStreetMap (street map)</label>
+        <div class="sub">Not satellite - a fallback to check the ward overlay if imagery tiles are blocked.</div>
+        <label class="opt"><input type="radio" name="base" value="none"> None (dark background)</label>
+      </div>
+      <div class="grp" id="dateGrp">
+        <h2>Date (NASA layers only)</h2>
+        <input type="date" id="dateInput">
+        <div class="sub" id="dateNote"></div>
+      </div>
+      <div class="grp">
+        <h2>Grid overlay</h2>
+        <select id="layerSel"></select>
+        <div id="legend"></div>
+        <div id="legendticks"></div>
+        <label class="opt" style="margin-top:8px">Opacity
+          <input type="range" id="opacity" min="0" max="100" value="65" style="flex:1">
+        </label>
+        <label class="opt"><input type="checkbox" id="showGrid" checked> Show cell outlines</label>
+        <label class="opt"><input type="checkbox" id="showWards" checked> Show ward/zone boundaries</label>
+      </div>
+      <div class="card" id="pickCard">
+        <h3>Selected cell</h3>
+        <div id="pick">Click any cell on the map.</div>
+      </div>
+      <div class="card">
+        <p><b>Attribution.</b> Esri World Imagery: Esri, Maxar, Earthstar Geographics, and the GIS user
+        community. NASA imagery: courtesy NASA Worldview / GIBS, operated by the NASA/GSFC/Earth Science Data
+        and Information System (ESDIS) project. Grid, ward and risk data: this project's own pipeline —
+        see the main digital twin's method section for what in that data is real versus simulated.</p>
+      </div>
+    </div>
+  </div>
+  <footer>Bengaluru heat digital twin — satellite basemap viewer. Imagery dates shown are the layer's nominal
+    acquisition date, not a guarantee of a cloud-free scene on that day.</footer>
+</div>
+
+<script>
+const BUNDLE = /*__BUNDLE__*/{};
+</script>
+<script>
+"use strict";
+(function(){
+if(typeof L==="undefined"){
+  document.getElementById("map").innerHTML =
+    '<div style="padding:24px;color:#fff;font:14px/1.6 system-ui">The map library (Leaflet) did not load from cdnjs.cloudflare.com. '+
+    'This page needs an internet connection - check your network/firewall, then reload.</div>';
+  return;
+}
+const D = BUNDLE;
+const S = D.cellSchema.reduce((a,k,i)=>(a[k]=i,a),{});
+const CELLS = D.cells;
+const POLY = Array.isArray(D.wardGeo) && D.wardGeo.length>0;          // real data: ward polygons
+const DENS = c => S.pop_density!==undefined ? c[S.pop_density] : c[S.population];
+const AREA = c => S.area_km2!==undefined ? c[S.area_km2] : 1;
+
+const CFG = {lstLo:30, lstHi:48, wH:0.60, wE:0.25, wV:0.15};
+const RAMP = ["#2A6F72","#68A894","#C9CFA0","#EBC77E","#DD8F45","#C0512E","#7E1F2C"];
+function clamp(v,a,b){return v<a?a:v>b?b:v}
+function lerp(a,b,t){return a+(b-a)*t}
+function hx(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+function mixHex(a,b,t){const A=hx(a),B=hx(b);
+  return `rgb(${Math.round(lerp(A[0],B[0],t))},${Math.round(lerp(A[1],B[1],t))},${Math.round(lerp(A[2],B[2],t))})`}
+function ramp(t){t=clamp(t,0,1)*(RAMP.length-1);const i=Math.floor(t),f=t-i;
+  if(i>=RAMP.length-1) return RAMP[RAMP.length-1]; return mixHex(RAMP[i],RAMP[i+1],f);}
+let LOGD=CELLS.map(c=>Math.log1p(DENS(c)));
+const LDMIN=Math.min(...LOGD), LDMAX=Math.max(...LOGD);
+const hazardOf=l=>clamp((l-CFG.lstLo)/(CFG.lstHi-CFG.lstLo),0,1)*100;
+const exposureOf=p=>clamp((Math.log1p(p)-LDMIN)/(LDMAX-LDMIN),0,1)*100;
+const riskOf=(lst,pop,vul)=>CFG.wH*hazardOf(lst)+CFG.wE*exposureOf(pop)+CFG.wV*vul*100;
+
+const LAYERS = [
+  {id:"risk",label:"Heat risk score",unit:"",get:c=>riskOf(c[S.lst],DENS(c),c[S.vulnerability]),lo:0,hi:100,dec:0},
+  {id:"lst",label:"Land surface temperature (pipeline)",unit:"°C",get:c=>c[S.lst],lo:30,hi:48,dec:1},
+  {id:"ndvi",label:"Vegetation index (NDVI)",unit:"",get:c=>c[S.ndvi],lo:0.05,hi:0.66,dec:2,inv:true},
+  {id:"builtup",label:"Built-up fraction",unit:"%",get:c=>c[S.builtup]*100,lo:5,hi:92,dec:0},
+  {id:"population",label:"Population density",unit:"/km²",get:c=>DENS(c),lo:0,hi:POLY?60000:45000,dec:0},
+];
+const layerOf = id => LAYERS.find(l=>l.id===id);
+let layer = "risk";
+
+// --- grid geometry: derive cell size from the data itself ---
+const lats=[...new Set(CELLS.map(c=>c[S.lat]))].sort((a,b)=>a-b);
+const lons=[...new Set(CELLS.map(c=>c[S.lon]))].sort((a,b)=>a-b);
+const dLat = POLY ? 0.009 : (lats.length>1 ? (lats[1]-lats[0]) : 0.009);
+const dLon = POLY ? 0.009 : (lons.length>1 ? (lons[1]-lons[0]) : 0.009);
+
+// --- map init ---
+const map = L.map('map', {preferCanvas:true, zoomControl:true})
+  .setView([12.97, 77.60], 11);
+const attrEsri = 'Tiles &copy; Esri &mdash; Esri, Maxar, Earthstar Geographics, GIS User Community';
+const attrNasa = 'Imagery courtesy NASA GIBS / Worldview (ESDIS)';
+
+const baseLayers = {};
+function gibsUrl(product, tms, ext){
+  return `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${product}/default/{time}/${tms}/{z}/{y}/{x}.${ext}`;
+}
+function makeGibs(product, tms, ext, maxZoom){
+  return L.tileLayer(gibsUrl(product,tms,ext), {
+    time: todayMinus(2), tileMatrixSet: tms, maxZoom: maxZoom||9, minZoom:1,
+    attribution: attrNasa,
+  });
+}
+baseLayers.esri = L.tileLayer(
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom:19, attribution: attrEsri});
+baseLayers.modis_terra = makeGibs('MODIS_Terra_CorrectedReflectance_TrueColor','GoogleMapsCompatible_Level9','jpg',9);
+baseLayers.modis_aqua  = makeGibs('MODIS_Aqua_CorrectedReflectance_TrueColor','GoogleMapsCompatible_Level9','jpg',9);
+baseLayers.viirs       = makeGibs('VIIRS_SNPP_CorrectedReflectance_TrueColor','GoogleMapsCompatible_Level9','jpg',9);
+baseLayers.lst         = makeGibs('MODIS_Terra_Land_Surface_Temp_Day','GoogleMapsCompatible_Level7','png',7);
+baseLayers.osm         = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {maxZoom:19, attribution:'&copy; OpenStreetMap contributors'});
+baseLayers.none        = L.tileLayer('', {attribution:''});
+let tileErrs=0;
+baseLayers.esri.on('tileerror', ()=>{ if(++tileErrs===6){
+  const d=document.createElement('div');
+  d.style.cssText='position:absolute;z-index:1200;left:50%;top:12px;transform:translateX(-50%);background:#7a2e12;color:#fff;padding:8px 14px;border-radius:6px;font:12.5px/1.5 system-ui;max-width:80%';
+  d.textContent='Satellite tiles are not loading (Esri World Imagery). Check your internet connection, VPN or firewall, or try the OpenStreetMap option on the right.';
+  document.getElementById('map').appendChild(d); } });
+
+function todayMinus(days){
+  const d=new Date(); d.setUTCDate(d.getUTCDate()-days);
+  return d.toISOString().slice(0,10);
+}
+document.getElementById('dateInput').value = todayMinus(2);
+document.getElementById('dateNote').textContent =
+  "GIBS 'best available' composites typically lag 1-3 days. Defaulting to " + todayMinus(2) + ".";
+
+let currentBase = baseLayers.esri.addTo(map);
+function setBase(id){
+  map.eachLayer(l=>{ if(Object.values(baseLayers).includes(l)) map.removeLayer(l); });
+  currentBase = baseLayers[id];
+  if(id!=="none") currentBase.addTo(map);
+  document.getElementById('dateGrp').style.display =
+    ["modis_terra","modis_aqua","viirs","lst"].includes(id) ? "block" : "none";
+  drawOverlay();
+}
+document.querySelectorAll('input[name=base]').forEach(r=>r.addEventListener('change',e=>setBase(e.target.value)));
+document.getElementById('dateInput').addEventListener('change', e=>{
+  const t=e.target.value;
+  ["modis_terra","modis_aqua","viirs","lst"].forEach(id=>{
+    baseLayers[id].setParams ? baseLayers[id].setParams({time:t}) : (baseLayers[id].options.time=t, baseLayers[id].redraw());
+  });
+});
+document.getElementById('dateGrp').style.display = "none";
+
+// --- grid + ward overlay, drawn with a Leaflet canvas renderer for speed ---
+const renderer = L.canvas({padding:0.3});
+let cellLayer = L.layerGroup().addTo(map);
+let wardLayer = L.layerGroup().addTo(map);
+let selectedRect = null;
+
+function cellBounds(c){
+  return [[c[S.lat]-dLat/2, c[S.lon]-dLon/2],[c[S.lat]+dLat/2, c[S.lon]+dLon/2]];
+}
+function wardLatLngs(w){                       // MultiPolygon as Leaflet [[ring],[ring],...]
+  return D.wardGeo[w].map(r=>{ const ring=[]; for(let i=0;i<r.length;i+=2) ring.push([r[i+1],r[i]]); return [ring]; });
+}
+function fmt(v,d){return Number(v).toLocaleString("en-IN",{minimumFractionDigits:d,maximumFractionDigits:d})}
+
+function drawOverlay(){
+  cellLayer.clearLayers();
+  const L_ = layerOf(layer);
+  const op = document.getElementById('opacity').value/100;
+  const showGrid = document.getElementById('showGrid').checked;
+  CELLS.forEach(c=>{
+    let t=(L_.get(c)-L_.lo)/(L_.hi-L_.lo); if(L_.inv) t=1-t;
+    const col = ramp(clamp(t,0,1));
+    const rect = POLY
+      ? L.polygon(wardLatLngs(c[S.ward]), {
+          renderer, color: showGrid ? "#16262A" : col, weight: showGrid?0.9:0,
+          fillColor: col, fillOpacity: op, opacity: showGrid?0.55:0,
+        })
+      : L.rectangle(cellBounds(c), {
+      renderer, color: showGrid ? "#16262A" : col, weight: showGrid?0.4:0,
+      fillColor: col, fillOpacity: op, opacity: showGrid?0.25:0,
+    });
+    rect.on('click', ()=>selectCell(c, rect));
+    rect.addTo(cellLayer);
+  });
+  renderLegend();
+}
+function renderLegend(){
+  const L_=layerOf(layer);
+  const stops = RAMP.map((c,i)=>`${L_.inv?RAMP[RAMP.length-1-i]:c} ${i/(RAMP.length-1)*100}%`).join(",");
+  document.getElementById('legend').style.background = `linear-gradient(90deg,${stops})`;
+  const t=[0,0.5,1].map(f=>fmt(L_.lo+(L_.hi-L_.lo)*f, L_.dec));
+  document.getElementById('legendticks').innerHTML = t.map((v,i)=>
+    `<span>${v}${i===2?" "+L_.unit:""}</span>`).join("");
+}
+function selectCell(c, rect){
+  if(selectedRect) selectedRect.setStyle({color:"#16262A", weight: document.getElementById('showGrid').checked?(POLY?0.9:0.4):0});
+  rect.setStyle({color:"#fff", weight:2.5}); selectedRect = rect;
+  const risk = riskOf(c[S.lst], DENS(c), c[S.vulnerability]);
+  document.getElementById('pick').innerHTML = `
+    <div class="row"><span>Ward</span><b>${D.wards[c[S.ward]]}</b></div>
+    <div class="row"><span>Zone</span><b>${D.zones[c[S.zone]]}</b></div>
+    <div class="row"><span>Coordinates</span><b class="mono">${c[S.lat].toFixed(4)}, ${c[S.lon].toFixed(4)}</b></div>
+    <div class="row"><span>Heat risk</span><b class="mono">${risk.toFixed(0)} / 100</b></div>
+    <div class="row"><span>LST (pipeline)</span><b class="mono">${c[S.lst].toFixed(1)} °C</b></div>
+    <div class="row"><span>NDVI</span><b class="mono">${c[S.ndvi].toFixed(2)}</b></div>
+    <div class="row"><span>Built-up</span><b class="mono">${(c[S.builtup]*100).toFixed(0)}%</b></div>
+    <div class="row"><span>Population</span><b class="mono">${c[S.population].toLocaleString("en-IN")}</b></div>
+    ${POLY?`<div class="row"><span>Area</span><b class="mono">${AREA(c).toFixed(1)} km²</b></div>
+    <div class="row"><span>Density</span><b class="mono">${Math.round(DENS(c)).toLocaleString("en-IN")} /km²</b></div>`:""}
+  `;
+  L.popup({closeButton:false}).setLatLng([c[S.lat],c[S.lon]])
+    .setContent(`${D.wards[c[S.ward]]}<br>risk ${risk.toFixed(0)} · ${c[S.lst].toFixed(1)}°C`)
+    .openOn(map);
+}
+
+function drawWardOutlines(){
+  wardLayer.clearLayers();
+  if(!document.getElementById('showWards').checked) return;
+  if(POLY){
+    const z=D.zoneSegs||[], lines=[];
+    for(let i=0;i<z.length;i+=4) lines.push([[z[i+1],z[i]],[z[i+3],z[i+2]]]);
+    if(lines.length) L.polyline(lines, {color:"#fff",weight:2.2,opacity:.95,renderer,interactive:false}).addTo(wardLayer);
+    return;
+  }
+  const grid = {}; CELLS.forEach(c=>grid[c[S.row]+"_"+c[S.col]]=c);
+  const keyOf = c => c[S.ward];
+  CELLS.forEach(c=>{
+    const k = keyOf(c);
+    const R = grid[(c[S.row]+1)+"_"+c[S.col]];
+    const T = grid[c[S.row]+"_"+(c[S.col]+1)];
+    const lat0=c[S.lat]-dLat/2, lat1=c[S.lat]+dLat/2, lon0=c[S.lon]-dLon/2, lon1=c[S.lon]+dLon/2;
+    if(!R || keyOf(R)!==k) L.polyline([[lat1,lon0],[lat1,lon1]], {color:"#fff",weight:1.4,opacity:.85,renderer}).addTo(wardLayer);
+    if(!T || keyOf(T)!==k) L.polyline([[lat0,lon1],[lat1,lon1]], {color:"#fff",weight:1.4,opacity:.85,renderer}).addTo(wardLayer);
+  });
+}
+
+// --- fit map to the grid extent ---
+let latAll=CELLS.map(c=>c[S.lat]), lonAll=CELLS.map(c=>c[S.lon]);
+if(POLY){ latAll=[]; lonAll=[]; D.wardGeo.forEach(rs=>rs.forEach(r=>{ for(let i=0;i<r.length;i+=2){ lonAll.push(r[i]); latAll.push(r[i+1]); } })); }
+map.fitBounds([[Math.min(...latAll)-dLat, Math.min(...lonAll)-dLon],
+              [Math.max(...latAll)+dLat, Math.max(...lonAll)+dLon]]);
+
+// --- wire controls ---
+const sel = document.getElementById('layerSel');
+sel.innerHTML = LAYERS.map(l=>`<option value="${l.id}">${l.label}</option>`).join("");
+sel.onchange = e=>{layer=e.target.value; drawOverlay();};
+document.getElementById('opacity').oninput = drawOverlay;
+document.getElementById('showGrid').onchange = drawOverlay;
+document.getElementById('showWards').onchange = drawWardOutlines;
+
+if(POLY){
+  document.querySelector('#pickCard h3').textContent = "Selected ward";
+  document.getElementById('pick').textContent = "Click any ward on the map.";
+  document.getElementById('showGrid').parentElement.lastChild.textContent = " Show ward outlines";
+  document.getElementById('showWards').parentElement.lastChild.textContent = " Show zone boundaries (thick white)";
+  document.querySelector('header p').textContent = "Real NASA / Esri imagery under the same ward polygons and risk data as the main twin.";
+}
+drawOverlay();
+drawWardOutlines();
+})();
+</script>
+</body>
+</html>
